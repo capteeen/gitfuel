@@ -280,6 +280,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 31px;
 }
@@ -304,7 +305,8 @@ main {
 .hero-feature-primary {
   background: linear-gradient(180deg, #8e91ff, #4643d3);
 }
-.hero-feature-secondary {
+.hero-feature-secondary,
+.hero-feature-x {
   background: #ffffff24;
   backdrop-filter: blur(10px);
 }

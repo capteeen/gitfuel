@@ -64,6 +64,9 @@ export function Hero({ markets }: { markets: Market[] }) {
         <div className="hero-feature-actions">
           <Link href="#markets" className="hero-feature-primary">Explore markets <ArrowRight size={17} aria-hidden="true" /></Link>
           <Link href="/launch" className="hero-feature-secondary">Launch a repo <ArrowUpRight size={17} aria-hidden="true" /></Link>
+          <a className="hero-feature-x" href="https://x.com/gitfuel/status/2105418284426580144" target="_blank" rel="noopener noreferrer">
+            <XMark /> On X
+          </a>
         </div>
       </div>
       <div className="hero-browser" aria-label="Preview of finding and launching a repository market">
@@ -155,5 +158,13 @@ export function Hero({ markets }: { markets: Market[] }) {
       </div>
     </section>
     </>
+  );
+}
+
+function XMark() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
   );
 }
