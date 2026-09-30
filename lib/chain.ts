@@ -21,6 +21,8 @@ import {
   getBuyTokenAmountFromSolAmount,
   getSellSolAmountFromTokenAmount,
 } from "@pump-fun/pump-sdk";
+import { rpcTargetsDevnet } from "./cluster";
+import { DEVNET_PUMP_BLOCK } from "./rpc-error";
 
 export const NATIVE_MINT = new PublicKey("So11111111111111111111111111111111111111112");
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -51,6 +53,28 @@ export function explainProgramLogs(logs: string[] | null | undefined) {
   if (anchor) return anchor.replace(/^Program log: /, "");
   const failed = [...logs].reverse().find((line) => /insufficient lamports|insufficient funds|already in use/i.test(line));
   return failed ? failed.replace(/^Program log: /, "") : null;
+}
+
+function assertMainnetPump(connection: Connection) {
+  if (rpcTargetsDevnet(connection.rpcEndpoint)) {
+    throw new Error(DEVNET_PUMP_BLOCK);
+  }
+}
+
+async function confirmSignature(connection: Connection, signature: string, lastValidBlockHeight: number) {
+  for (;;) {
+    const { value } = await connection.getSignatureStatuses([signature]);
+    const status = value[0];
+    if (status?.err) {
+      throw new Error(`The transaction failed on-chain: ${JSON.stringify(status.err)}`);
+    }
+    if (status?.confirmationStatus === "confirmed" || status?.confirmationStatus === "finalized") return;
+    const height = await connection.getBlockHeight("confirmed");
+    if (height > lastValidBlockHeight) {
+      throw new Error("The transaction expired before confirmation.");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
 }
 
 function explainSendError(error: unknown) {
@@ -120,7 +144,7 @@ async function sendInstructions(
   }
   try {
     const signature = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+    await confirmSignature(connection, signature, lastValidBlockHeight);
     return signature;
   } catch (error) {
     throw explainSendError(error);
@@ -128,6 +152,7 @@ async function sendInstructions(
 }
 
 export async function readCurve(connection: Connection, mintAddress: string) {
+  assertMainnetPump(connection);
   const mint = new PublicKey(mintAddress);
   const online = new OnlinePumpSdk(connection);
   const info = await connection.getAccountInfo(bondingCurvePda(mint));
@@ -159,6 +184,7 @@ export async function readCurve(connection: Connection, mintAddress: string) {
 }
 
 export async function quoteInitialBuy(connection: Connection, sol: number) {
+  assertMainnetPump(connection);
   if (!(sol > 0) || !Number.isFinite(sol)) return null;
   const lamports = Math.round(sol * LAMPORTS_PER_SOL);
   if (lamports <= 0) return null;
@@ -198,6 +224,7 @@ export async function createCoin(
   if (input.solBuy != null && input.solBuy !== 0 && !Number.isFinite(input.solBuy)) {
     throw new Error("First buy must be a SOL amount.");
   }
+  assertMainnetPump(connection);
   let instructions: TransactionInstruction[];
   if (lamports > 0) {
     const quoteAmount = new BN(lamports);
@@ -246,6 +273,7 @@ export async function createCoin(
 }
 
 export async function buyOnCurve(connection: Connection, wallet: WalletSigner, mintAddress: string, sol: number, slippage: number) {
+  assertMainnetPump(connection);
   if (!(sol > 0)) throw new Error("Enter a SOL amount.");
   const mint = new PublicKey(mintAddress);
   const online = new OnlinePumpSdk(connection);
@@ -288,6 +316,7 @@ export async function sellOnCurve(
   tokenAmount: string,
   slippage: number,
 ) {
+  assertMainnetPump(connection);
   const mint = new PublicKey(mintAddress);
   const online = new OnlinePumpSdk(connection);
   const [global, feeConfig, state] = await Promise.all([
@@ -322,6 +351,7 @@ export async function sellOnCurve(
 }
 
 export async function migrateCurve(connection: Connection, wallet: WalletSigner, mintAddress: string) {
+  assertMainnetPump(connection);
   const mint = new PublicKey(mintAddress);
   const online = new OnlinePumpSdk(connection);
   const info = await connection.getAccountInfo(bondingCurvePda(mint));
@@ -426,6 +456,7 @@ export async function assignBuilderShare(
 }
 
 export async function readVaults(connection: Connection, creator: string) {
+  assertMainnetPump(connection);
   const online = new OnlinePumpSdk(connection);
   const rows = await online.getCreatorVaultQuoteBalances(new PublicKey(creator));
   return rows.map((row) => ({

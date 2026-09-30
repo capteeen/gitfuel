@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { OnlinePumpSdk, PUMP_SDK, bondingCurvePda, canonicalPumpPoolPda } from "@pump-fun/pump-sdk";
 import { z } from "zod";
-import { serverRpc } from "@/lib/cluster";
+import { rpcTargetsDevnet, serverRpc } from "@/lib/cluster";
+import { DEVNET_PUMP_BLOCK, explainChainError } from "@/lib/rpc-error";
 import { getMarketByMint, launchRegistryBlock, updateCurve } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -21,8 +22,12 @@ export async function POST(request: Request) {
   const market = await getMarketByMint(parsed.data.mint);
   if (!market) return NextResponse.json({ error: "Market missing." }, { status: 404 });
   try {
+    const upstream = serverRpc();
+    if (rpcTargetsDevnet(upstream)) {
+      return NextResponse.json({ error: DEVNET_PUMP_BLOCK, market }, { status: 400 });
+    }
     const mint = new PublicKey(parsed.data.mint);
-    const connection = new Connection(serverRpc(), "confirmed");
+    const connection = new Connection(upstream, "confirmed");
     const online = new OnlinePumpSdk(connection);
     const info = await connection.getAccountInfo(bondingCurvePda(mint));
     if (!info) return NextResponse.json({ error: "No bonding curve on the server RPC.", market });
@@ -36,7 +41,7 @@ export async function POST(request: Request) {
     const updated = await updateCurve(parsed.data.mint, curve.complete, pumpswapPool);
     return NextResponse.json({ market: updated });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Curve sync failed.";
+    const message = explainChainError(error, "Curve sync failed.");
     return NextResponse.json({ error: message, market }, { status: 502 });
   }
 }

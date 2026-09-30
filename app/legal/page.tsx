@@ -26,7 +26,7 @@ export default function LegalPage() {
       </section>
       <section>
         <h2 className="text-xl text-white">4. Tokens and securities risk</h2>
-        <p className="mt-2">Launching or promoting tokens can implicate securities, commodities, and money-transmission rules depending on jurisdiction and how $GFUL or repo coins are marketed. Avoid promises of profit, guaranteed buybacks, or passive income. Proposed revenue and buyback policies stay labeled proposed until executed under a reviewed policy. This interface does not fabricate transactions.</p>
+        <p className="mt-2">Launching or promoting tokens can implicate securities, commodities, and money-transmission rules depending on jurisdiction and how $GITFUEL or repo coins are marketed. Avoid promises of profit, guaranteed buybacks, or passive income. Proposed revenue and buyback policies stay labeled proposed until executed under a reviewed policy. This interface does not fabricate transactions.</p>
       </section>
       <section id="claims">
         <h2 className="text-xl text-white">5. Creator fees and claims</h2>
@@ -61,7 +61,7 @@ export default function LegalPage() {
           <li>Multisig for treasury; avoid a single-EOA policy fund</li>
           <li>Fee-sharing docs that match the on-chain config</li>
           <li>No placeholder “executed buyback” UI — this build does not have one</li>
-          <li>Trademark search for GitFuel / GFUL in the markets you enter</li>
+          <li>Trademark search for GitFuel / GITFUEL in the markets you enter</li>
         </ul>
       </section>
     </article>

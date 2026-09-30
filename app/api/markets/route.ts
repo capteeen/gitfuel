@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertConfirmedCreate } from "@/lib/confirm-tx";
+import { explainChainError } from "@/lib/rpc-error";
 import { getMarketByGithubId, insertMarket, launchRegistryBlock, listLanguages, listMarkets } from "@/lib/db";
 import { resolvePublicRepo } from "@/lib/github";
 
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ market });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not register the market.";
+    const message = explainChainError(error, "Could not register the market.");
     const status = message.includes("already has a market") ? 409 : 400;
     return NextResponse.json({ error: message }, { status });
   }

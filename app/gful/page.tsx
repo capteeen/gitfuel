@@ -8,7 +8,7 @@ export default function GfulPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <p className="font-mono text-xs text-[#9CB7FF]">06 Buy back</p>
-      <h1 className="mt-2 font-display text-6xl text-white">$GFUL</h1>
+      <h1 className="mt-2 font-display text-6xl text-white">$GITFUEL</h1>
       <p className="mt-3 max-w-2xl text-[#9DA8BE]">Pre-TGE: policy only. This dashboard does not list buys, burns, or reserve balances unless a reviewed execution is linked. The list below is empty on purpose.</p>
       <section className="mt-6 rounded-3xl border border-[#9CB7FF]/40 bg-[#111320] p-5">
         <p className="text-[11px] tracking-[0.18em] text-[#9CB7FF]">PROPOSED</p>

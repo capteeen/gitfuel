@@ -4,13 +4,16 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { useMemo } from "react";
 import { Buffer } from "buffer";
-import { publicEndpoint } from "@/lib/cluster";
+import { browserEndpoint } from "@/lib/cluster";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 if (!globalThis.Buffer) globalThis.Buffer = Buffer;
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const endpoint = publicEndpoint();
+  const endpoint = useMemo(
+    () => browserEndpoint(typeof window === "undefined" ? "http://127.0.0.1:3000" : window.location.origin),
+    [],
+  );
   const wallets = useMemo(() => [], []);
 
   return (

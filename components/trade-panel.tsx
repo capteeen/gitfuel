@@ -5,6 +5,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import type { Market } from "@/lib/types";
 import { dexscreenerUrl, platformTreasury, pumpCoinUrl, solscanMint } from "@/lib/cluster";
+import { explainChainError } from "@/lib/rpc-error";
 import { formatStars, shortKey } from "@/lib/format";
 
 type CurveView = {
@@ -48,7 +49,7 @@ export function TradePanel({ market }: { market: Market }) {
           body: JSON.stringify({ mint: market.mint }),
         });
       } catch (cause) {
-        if (!cancel) setCurveError(cause instanceof Error ? cause.message : "Curve unread.");
+        if (!cancel) setCurveError(explainChainError(cause, "Curve unread."));
       }
     })();
     return () => {
@@ -71,7 +72,7 @@ export function TradePanel({ market }: { market: Market }) {
         : await chain.sellOnCurve(connection, { publicKey: wallet.publicKey, signTransaction: wallet.signTransaction }, market.mint, amount, slippage);
       setMessage(signature);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Trade failed.");
+      setError(explainChainError(cause, "Trade failed."));
     } finally {
       setBusy(false);
     }
@@ -90,7 +91,7 @@ export function TradePanel({ market }: { market: Market }) {
       const signature = await configureCustodialShares(connection, { publicKey: wallet.publicKey, signTransaction: wallet.signTransaction }, market.mint, platformTreasury);
       setMessage(signature);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Fee share update failed.");
+      setError(explainChainError(cause, "Fee share update failed."));
     } finally {
       setBusy(false);
     }

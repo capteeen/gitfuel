@@ -11,7 +11,7 @@ const NAV = [
   { href: "/", label: "Discover" },
   { href: "/launch", label: "Launch" },
   { href: "/claim", label: "For builders" },
-  { href: "/gful", label: "$GFUL" },
+  { href: "/gful", label: "$GITFUEL" },
 ];
 
 export function SiteFrame({ children }: { children: React.ReactNode }) {

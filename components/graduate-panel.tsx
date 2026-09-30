@@ -5,6 +5,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import type { Market } from "@/lib/types";
 import { dexscreenerUrl, pumpCoinUrl } from "@/lib/cluster";
+import { explainChainError } from "@/lib/rpc-error";
 
 export function GraduatePanel({ market }: { market: Market }) {
   const { connection } = useConnection();
@@ -27,7 +28,7 @@ export function GraduatePanel({ market }: { market: Market }) {
         setComplete(curve.complete);
         setPool(curve.pool);
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Could not read the curve.");
+        setError(explainChainError(cause, "Could not read the curve."));
       }
     })();
   }, [connection, market.mint]);
@@ -45,7 +46,7 @@ export function GraduatePanel({ market }: { market: Market }) {
       setSignature(sig);
       setComplete(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Migrate failed.");
+      setError(explainChainError(cause, "Migrate failed."));
     } finally {
       setBusy(false);
     }

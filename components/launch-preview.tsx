@@ -5,6 +5,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import type { Market, RepoPreview } from "@/lib/types";
 import { platformTreasury, pumpCoinUrl, solscanMint } from "@/lib/cluster";
+import { explainChainError } from "@/lib/rpc-error";
 import { suggestSymbol } from "@/lib/format";
 
 export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; market: Market | null; symbols: string[] }) {
@@ -23,7 +24,17 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
   const taken = symbols.includes(symbol) && market?.symbol !== symbol;
 
   useEffect(() => {
-    connection.getMinimumBalanceForRentExemption(82).then((lamports) => setRent(lamports / 1_000_000_000)).catch(() => setRent(null));
+    let cancel = false;
+    connection.getMinimumBalanceForRentExemption(82).then((lamports) => {
+      if (!cancel) setRent(lamports / 1_000_000_000);
+    }).catch((cause) => {
+      if (cancel) return;
+      setRent(null);
+      setError(explainChainError(cause, "Mint rent could not be read."));
+    });
+    return () => {
+      cancel = true;
+    };
   }, [connection]);
 
   async function launch() {
@@ -79,7 +90,7 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
       setBusy("");
     } catch (cause) {
       setBusy("");
-      setError(cause instanceof Error ? cause.message : "Create failed.");
+      setError(explainChainError(cause, "Create failed."));
     }
   }
 

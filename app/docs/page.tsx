@@ -6,7 +6,7 @@ const LOOP = [
   ["03", "Trade", "Buy and sell on the curve before graduation. Afterward, the pair is PumpSwap."],
   ["04", "Builders earn", "A verified owner or admin claims creator fees. This is the highlighted step."],
   ["05", "Graduate", "A complete curve can be migrated, permissionlessly, to PumpSwap."],
-  ["06", "Buy back", "Platform revenue policy for $GFUL. Proposed until a real transaction is linked."],
+  ["06", "Buy back", "Platform revenue policy for $GITFUEL. Proposed until a real transaction is linked."],
 ];
 
 export default function DocsPage() {

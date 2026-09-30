@@ -7,6 +7,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import type { ClaimEvent, ClaimRecord, Market } from "@/lib/types";
 import { platformTreasury } from "@/lib/cluster";
+import { explainChainError } from "@/lib/rpc-error";
 import { shortKey } from "@/lib/format";
 
 type SessionView = {
@@ -158,7 +159,7 @@ export function ClaimFlow({
       setBusy("");
     } catch (cause) {
       setBusy("");
-      setError(cause instanceof Error ? cause.message : "Share update failed.");
+      setError(explainChainError(cause, "Share update failed."));
     }
   }
 
