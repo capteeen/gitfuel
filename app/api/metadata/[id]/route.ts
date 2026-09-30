@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getRepo, readMetadata, saveMetadata, storageConfigured } from "@/lib/db";
+import { getRepo, launchRegistryBlock, readMetadata, saveMetadata, storageConfigured } from "@/lib/db";
+import { resolveRepoById } from "@/lib/github";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,15 +25,19 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!storageConfigured()) {
-    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  const blocked = await launchRegistryBlock();
+  if (blocked) {
+    return NextResponse.json({ error: blocked }, { status: 503 });
   }
   const json = await request.json().catch(() => null);
   const parsed = schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Metadata is incomplete." }, { status: 400 });
-  const repo = await getRepo(parsed.data.githubRepoId);
+  const repo = (await getRepo(parsed.data.githubRepoId)) ?? (await resolveRepoById(parsed.data.githubRepoId));
   if (!repo || repo.htmlUrl !== parsed.data.website) {
     return NextResponse.json({ error: "Website must stay the cached GitHub URL for this id." }, { status: 400 });
+  }
+  if (!storageConfigured() && !process.env.PINATA_JWT) {
+    return NextResponse.json({ error: "Metadata hosting needs PINATA_JWT or a persistent repo cache." }, { status: 503 });
   }
   const document = {
     name: parsed.data.name,

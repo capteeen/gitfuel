@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertConfirmedCreate } from "@/lib/confirm-tx";
-import { getMarketByGithubId, insertMarket, listLanguages, listMarkets, storageConfigured } from "@/lib/db";
+import { getMarketByGithubId, insertMarket, launchRegistryBlock, listLanguages, listMarkets } from "@/lib/db";
 import { resolvePublicRepo } from "@/lib/github";
 
 export const runtime = "nodejs";
@@ -34,8 +34,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!storageConfigured()) {
-    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  const blocked = await launchRegistryBlock();
+  if (blocked) {
+    return NextResponse.json({ error: blocked }, { status: 503 });
   }
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);

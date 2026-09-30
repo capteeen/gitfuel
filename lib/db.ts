@@ -71,6 +71,51 @@ export function storageConfigured() {
   return !process.env.VERCEL || Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
 }
 
+export type LaunchRegistry =
+  | { state: "open" }
+  | { state: "missing_table" }
+  | { state: "unavailable"; detail?: string };
+
+function missingMarketsTable(error: { code?: string; message?: string }) {
+  const code = error.code || "";
+  const message = error.message || "";
+  return (
+    code === "PGRST205" ||
+    code === "42P01" ||
+    /could not find the table ['"]public\.markets['"]/i.test(message) ||
+    /relation ['"]public\.markets['"] does not exist/i.test(message)
+  );
+}
+
+/** Supabase public.markets is the launch registry when it answers. Turso is only required for the SQLite cache and claims. */
+export async function launchRegistry(): Promise<LaunchRegistry> {
+  if (supabaseConfigured()) {
+    try {
+      const supabase = createSupabaseClient();
+      const { error } = await supabase.from("markets").select("github_repo_id").limit(1);
+      if (!error) return { state: "open" };
+      if (missingMarketsTable(error)) return { state: "missing_table" };
+      console.warn(`Markets registry query failed: ${error.message}`);
+      return { state: "unavailable", detail: "Supabase is configured, but the markets registry could not be queried. Refresh and try again." };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Supabase query failed.";
+      console.warn(`Markets registry query failed: ${message}`);
+      return { state: "unavailable", detail: "Supabase is configured, but the markets registry could not be queried. Refresh and try again." };
+    }
+  }
+  if (storageConfigured()) return { state: "open" };
+  return { state: "unavailable" };
+}
+
+export async function launchRegistryBlock() {
+  const registry = await launchRegistry();
+  if (registry.state === "open") return null;
+  if (registry.state === "missing_table") {
+    return "The public.markets table is missing. Apply supabase/migrations/20260930120000_markets.sql.";
+  }
+  return registry.detail || "Market registry is temporarily unavailable.";
+}
+
 function requirePersistentStorage() {
   if (!storageConfigured()) {
     throw new Error("Market registry unavailable: configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN before launching or claiming.");
@@ -192,6 +237,7 @@ const MARKET_SELECT = `
 `;
 
 export async function upsertRepo(repo: RepoPreview) {
+  if (!storageConfigured()) return;
   await run(
     `INSERT INTO repos (
         github_repo_id, owner, name, full_name, description, stars, forks, language, avatar_url, html_url, fetched_at
@@ -320,8 +366,15 @@ export async function listDisplayedMarkets() {
   try {
     return { markets: await queryMarkets(), error: null as string | null };
   } catch (error) {
-    console.warn(error instanceof Error ? `Market list failed: ${error.message}` : "Market list failed");
-    return { markets: [] as Market[], error: "Launches could not be loaded right now." };
+    const message = error instanceof Error ? error.message : "";
+    console.warn(message ? `Market list failed: ${message}` : "Market list failed");
+    const missing = /PGRST205|42P01|could not find the table ['"]public\.markets['"]|relation ['"]public\.markets['"] does not exist/i.test(message);
+    return {
+      markets: [] as Market[],
+      error: missing
+        ? "The public.markets table is missing. Apply supabase/migrations/20260930120000_markets.sql, then refresh."
+        : "Launches could not be loaded right now.",
+    };
   }
 }
 
@@ -522,6 +575,7 @@ export async function updateCurve(mint: string, bondingComplete: boolean, pumpsw
 }
 
 export async function saveMetadata(githubRepoId: number, body: string) {
+  if (!storageConfigured()) return;
   await run(
     `INSERT INTO metadata (github_repo_id, body) VALUES (?, ?)
        ON CONFLICT(github_repo_id) DO UPDATE SET body = excluded.body`,

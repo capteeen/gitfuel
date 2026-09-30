@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMarketByGithubId, getRepo, storageConfigured } from "@/lib/db";
+import { getMarketByGithubId, getRepo, launchRegistryBlock } from "@/lib/db";
 import { parseGithubUrl, repoResponse, resolvePublicRepo } from "@/lib/github";
 
 export const runtime = "nodejs";
@@ -17,8 +17,9 @@ function limited(ip: string) {
 }
 
 export async function GET(request: Request) {
-  if (!storageConfigured()) {
-    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  const blocked = await launchRegistryBlock();
+  if (blocked) {
+    return NextResponse.json({ error: blocked }, { status: 503 });
   }
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");

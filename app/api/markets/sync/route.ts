@@ -3,7 +3,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { OnlinePumpSdk, PUMP_SDK, bondingCurvePda, canonicalPumpPoolPda } from "@pump-fun/pump-sdk";
 import { z } from "zod";
 import { serverRpc } from "@/lib/cluster";
-import { getMarketByMint, storageConfigured, updateCurve } from "@/lib/db";
+import { getMarketByMint, launchRegistryBlock, updateCurve } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,8 +11,9 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({ mint: z.string().min(32) });
 
 export async function POST(request: Request) {
-  if (!storageConfigured()) {
-    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  const blocked = await launchRegistryBlock();
+  if (blocked) {
+    return NextResponse.json({ error: blocked }, { status: 503 });
   }
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);

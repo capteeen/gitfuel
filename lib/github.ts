@@ -29,42 +29,37 @@ export function parseGithubUrl(input: string) {
   return { owner, repo };
 }
 
-export async function resolvePublicRepo(owner: string, repo: string): Promise<RepoPreview> {
+type GithubRepoBody = {
+  id?: number;
+  name?: string;
+  full_name?: string;
+  description?: string | null;
+  stargazers_count?: number;
+  forks_count?: number;
+  language?: string | null;
+  html_url?: string;
+  private?: boolean;
+  owner?: { login?: string; avatar_url?: string };
+};
+
+function githubHeaders() {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "User-Agent": "GitFuel",
     "X-GitHub-Api-Version": "2022-11-28",
   };
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers, cache: "no-store" });
-  if (response.status === 404) {
-    throw new Error("GitHub returned 404. This URL is private, missing, or mistyped. GitFuel only accepts public repositories.");
-  }
-  if (response.status === 403 || response.status === 429) {
-    throw new Error("GitHub rate limit. Wait, or set GITHUB_TOKEN for a higher limit. Nothing was launched.");
-  }
-  if (!response.ok) {
-    throw new Error(`GitHub responded ${response.status}. The repo was not resolved.`);
-  }
-  const body = (await response.json()) as {
-    id?: number;
-    name?: string;
-    full_name?: string;
-    description?: string | null;
-    stargazers_count?: number;
-    forks_count?: number;
-    language?: string | null;
-    html_url?: string;
-    private?: boolean;
-    owner?: { login?: string; avatar_url?: string };
-  };
+  return headers;
+}
+
+function previewFromGithub(body: GithubRepoBody): RepoPreview {
   if (body.private) {
     throw new Error("Private repositories are out of scope. GitFuel only launches public repos.");
   }
   if (!body.id || !body.owner?.login || !body.name || !body.full_name || !body.html_url || !body.owner.avatar_url) {
     throw new Error("GitHub omitted the numeric repo id or owner. Prefill stopped.");
   }
-  const preview: RepoPreview = {
+  return {
     githubRepoId: body.id,
     owner: body.owner.login,
     name: body.name,
@@ -76,8 +71,35 @@ export async function resolvePublicRepo(owner: string, repo: string): Promise<Re
     avatarUrl: body.owner.avatar_url,
     htmlUrl: body.html_url,
   };
+}
+
+export async function resolvePublicRepo(owner: string, repo: string): Promise<RepoPreview> {
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers: githubHeaders(), cache: "no-store" });
+  if (response.status === 404) {
+    throw new Error("GitHub returned 404. This URL is private, missing, or mistyped. GitFuel only accepts public repositories.");
+  }
+  if (response.status === 403 || response.status === 429) {
+    throw new Error("GitHub rate limit. Wait, or set GITHUB_TOKEN for a higher limit. Nothing was launched.");
+  }
+  if (!response.ok) {
+    throw new Error(`GitHub responded ${response.status}. The repo was not resolved.`);
+  }
+  const preview = previewFromGithub((await response.json()) as GithubRepoBody);
   await upsertRepo(preview);
   return preview;
+}
+
+export async function resolveRepoById(githubRepoId: number): Promise<RepoPreview | null> {
+  if (!Number.isInteger(githubRepoId) || githubRepoId <= 0) return null;
+  const response = await fetch(`https://api.github.com/repositories/${githubRepoId}`, { headers: githubHeaders(), cache: "no-store" });
+  if (!response.ok) return null;
+  try {
+    const preview = previewFromGithub((await response.json()) as GithubRepoBody);
+    await upsertRepo(preview);
+    return preview;
+  } catch {
+    return null;
+  }
 }
 
 export async function repoResponse(repo: RepoPreview) {
