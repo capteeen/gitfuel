@@ -895,7 +895,7 @@ main {
 }
 .repository-table-scroll { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #a2b9ff66 transparent; }
 .repository-table-scroll:focus-visible { outline: 2px solid #d7e4ff; outline-offset: -3px; }
-.repository-table { width: 100%; min-width: 1030px; border-collapse: collapse; text-align: left; font-size: 12px; }
+.repository-table { width: 100%; min-width: 1180px; border-collapse: collapse; text-align: left; font-size: 12px; }
 .repository-table th {
   padding: 19px 12px;
   border-bottom: 1px solid #ffffff30;
@@ -918,7 +918,8 @@ main {
 .repo-description { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; color: #cfdaff; font-size: 10px; }
 .repo-verification { display: inline-flex; align-items: center; gap: 4px; margin-top: 7px; border: 1px solid #ffffff1c; padding: 2px 7px; border-radius: 20px; color: #c8d6ff; background: #101a4c20; font-size: 8px; }
 .repo-verification.is-verified { color: #fff; background: #bed1ff26; border-color: #d1e0ff4d; }
-.repo-symbol { display: block; max-width: 105px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 11px; font-weight: 600; }
+.repo-symbol { display: block; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 11px; font-weight: 600; }
+.repo-mint, .repo-launched { color: #e6edff; font-family: var(--font-geist-mono), monospace; font-size: 10px; white-space: nowrap; }
 .repo-secondary { display: block; margin-top: 5px; font-size: 9px; color: #c7d5ff; white-space: nowrap; }
 .repo-unavailable { color: #b6c9f4; font-family: var(--font-geist-mono), monospace; }
 .repo-stars { display: inline-flex; align-items: center; gap: 5px; color: #e6edff; white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums; }

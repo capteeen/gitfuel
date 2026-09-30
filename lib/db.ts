@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Client } from "@libsql/client/web";
+import { createSupabaseClient, supabaseConfigured } from "./supabase";
 import type { ClaimEvent, ClaimRecord, ClaimStatus, Market, RepoPreview } from "./types";
 
 let db: Promise<DatabaseSync> | null = null;
@@ -128,6 +129,10 @@ function num(value: unknown) {
   return 0;
 }
 
+function flag(value: unknown) {
+  return value === true || num(value) === 1;
+}
+
 function text(value: unknown) {
   return value == null ? "" : String(value);
 }
@@ -170,9 +175,9 @@ function toMarket(value: unknown): Market {
     metadataUri: text(record.metadata_uri),
     imageUrl: nullable(record.image_url),
     launcher: text(record.launcher),
-    bondingComplete: num(record.bonding_complete) === 1,
+    bondingComplete: flag(record.bonding_complete),
     pumpswapPool: nullable(record.pumpswap_pool),
-    confirmed: num(record.confirmed) === 1,
+    confirmed: flag(record.confirmed),
     createdAt: text(record.created_at),
     claimStatus,
     claimedWallet: nullable(record.claimed_wallet),
@@ -223,23 +228,71 @@ export async function getRepo(githubRepoId: number) {
   return found ? toRepo(found) : null;
 }
 
-export async function getMarketByGithubId(githubRepoId: number) {
-  const [found] = await all(`${MARKET_SELECT} WHERE m.github_repo_id = ?`, [githubRepoId]);
-  return found ? toMarket(found) : null;
-}
-
-export async function getMarketByMint(mint: string) {
-  const [found] = await all(`${MARKET_SELECT} WHERE m.mint = ?`, [mint]);
-  return found ? toMarket(found) : null;
-}
-
-export async function listMarkets(filters: {
+type MarketFilters = {
   q?: string;
   language?: string;
   minStars?: number;
   claim?: string;
   stage?: string;
-} = {}) {
+};
+
+function applyClaim(market: Market, claim: unknown): Market {
+  if (!claim) return market;
+  const record = row(claim);
+  const status = text(record.status);
+  const claimStatus: ClaimStatus =
+    status === "pending" || status === "active" || status === "revoked" ? status : "unclaimed";
+  return {
+    ...market,
+    claimStatus,
+    claimedWallet: nullable(record.solana_pubkey),
+    claimedByGithubUserId: record.github_user_id == null ? null : num(record.github_user_id),
+  };
+}
+
+async function overlayClaims(markets: Market[]) {
+  if (!markets.length) return markets;
+  try {
+    const ids = markets.map((market) => market.githubRepoId);
+    const placeholders = ids.map(() => "?").join(", ");
+    const claims = await all(
+      `SELECT github_repo_id, status, solana_pubkey, github_user_id FROM claims WHERE github_repo_id IN (${placeholders})`,
+      ids,
+    );
+    const byId = new Map(claims.map((item) => [num(row(item).github_repo_id), item]));
+    return markets.map((market) => applyClaim(market, byId.get(market.githubRepoId)));
+  } catch (error) {
+    console.warn(error instanceof Error ? `Claim overlay failed: ${error.message}` : "Claim overlay failed");
+    return markets;
+  }
+}
+
+function matchesFilters(market: Market, filters: MarketFilters) {
+  if (filters.q) {
+    const query = filters.q.toLowerCase();
+    const haystack = `${market.fullName} ${market.symbol} ${market.mint} ${market.githubRepoId}`.toLowerCase();
+    if (!haystack.includes(query)) return false;
+  }
+  if (filters.language && market.language !== filters.language) return false;
+  if (filters.minStars && market.stars < filters.minStars) return false;
+  if (filters.claim === "claimed" && market.claimStatus !== "active") return false;
+  if (filters.claim === "unclaimed" && market.claimStatus === "active") return false;
+  if (filters.stage === "bonding" && market.bondingComplete) return false;
+  if (filters.stage === "graduated" && !market.bondingComplete) return false;
+  return true;
+}
+
+async function supabaseMarkets() {
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase.from("markets").select("*").order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return overlayClaims((data ?? []).map((item) => toMarket(item)));
+}
+
+async function queryMarkets(filters: MarketFilters = {}) {
+  if (supabaseConfigured()) {
+    return (await supabaseMarkets()).filter((market) => matchesFilters(market, filters));
+  }
   const clauses: string[] = [];
   const params: Array<string | number> = [];
   if (filters.q) {
@@ -263,10 +316,130 @@ export async function listMarkets(filters: {
   return (await all(`${MARKET_SELECT} ${where} ORDER BY m.created_at DESC`, params)).map(toMarket);
 }
 
+export async function listDisplayedMarkets() {
+  try {
+    return { markets: await queryMarkets(), error: null as string | null };
+  } catch (error) {
+    console.warn(error instanceof Error ? `Market list failed: ${error.message}` : "Market list failed");
+    return { markets: [] as Market[], error: "Launches could not be loaded right now." };
+  }
+}
+
+export async function getMarketByGithubId(githubRepoId: number) {
+  if (supabaseConfigured()) {
+    try {
+      const supabase = createSupabaseClient();
+      const { data, error } = await supabase.from("markets").select("*").eq("github_repo_id", githubRepoId).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return null;
+      const [market] = await overlayClaims([toMarket(data)]);
+      return market ?? null;
+    } catch (error) {
+      console.warn(error instanceof Error ? `Market lookup failed: ${error.message}` : "Market lookup failed");
+      return null;
+    }
+  }
+  const [found] = await all(`${MARKET_SELECT} WHERE m.github_repo_id = ?`, [githubRepoId]);
+  return found ? toMarket(found) : null;
+}
+
+export async function getMarketByMint(mint: string) {
+  if (supabaseConfigured()) {
+    try {
+      const supabase = createSupabaseClient();
+      const { data, error } = await supabase.from("markets").select("*").eq("mint", mint).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return null;
+      const [market] = await overlayClaims([toMarket(data)]);
+      return market ?? null;
+    } catch (error) {
+      console.warn(error instanceof Error ? `Market lookup failed: ${error.message}` : "Market lookup failed");
+      return null;
+    }
+  }
+  const [found] = await all(`${MARKET_SELECT} WHERE m.mint = ?`, [mint]);
+  return found ? toMarket(found) : null;
+}
+
+export async function listMarkets(filters: MarketFilters = {}) {
+  try {
+    return await queryMarkets(filters);
+  } catch (error) {
+    console.warn(error instanceof Error ? `Market list failed: ${error.message}` : "Market list failed");
+    return [];
+  }
+}
+
 export async function listLanguages() {
-  return (await all("SELECT DISTINCT language FROM markets WHERE language IS NOT NULL AND language != '' ORDER BY language"))
-    .map((item) => text(row(item).language))
-    .filter(Boolean);
+  try {
+    if (supabaseConfigured()) {
+      const supabase = createSupabaseClient();
+      const { data, error } = await supabase.from("markets").select("language");
+      if (error) throw new Error(error.message);
+      const languages = (data ?? [])
+        .map((item) => nullable(row(item).language))
+        .filter((language): language is string => Boolean(language));
+      return [...new Set(languages)].sort();
+    }
+    return (await all("SELECT DISTINCT language FROM markets WHERE language IS NOT NULL AND language != '' ORDER BY language"))
+      .map((item) => text(row(item).language))
+      .filter(Boolean);
+  } catch (error) {
+    console.warn(error instanceof Error ? `Language list failed: ${error.message}` : "Language list failed");
+    return [];
+  }
+}
+
+const MARKET_INSERT = `INSERT INTO markets (
+        github_repo_id, owner, name, full_name, description, stars, forks, language, avatar_url, html_url,
+        coin_name, symbol, mint, metadata_uri, image_url, launcher, bonding_complete, pumpswap_pool, confirmed, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 1, ?)`;
+
+function marketInsertArgs(input: {
+  repo: RepoPreview;
+  coinName: string;
+  symbol: string;
+  mint: string;
+  metadataUri: string;
+  imageUrl: string | null;
+  launcher: string;
+}, createdAt: string): SqlValue[] {
+  return [
+    input.repo.githubRepoId,
+    input.repo.owner,
+    input.repo.name,
+    input.repo.fullName,
+    input.repo.description,
+    input.repo.stars,
+    input.repo.forks,
+    input.repo.language,
+    input.repo.avatarUrl,
+    input.repo.htmlUrl,
+    input.coinName,
+    input.symbol,
+    input.mint,
+    input.metadataUri,
+    input.imageUrl,
+    input.launcher,
+    createdAt,
+  ];
+}
+
+async function cacheMarketLocally(input: {
+  repo: RepoPreview;
+  coinName: string;
+  symbol: string;
+  mint: string;
+  metadataUri: string;
+  imageUrl: string | null;
+  launcher: string;
+}, createdAt: string) {
+  if (process.env.VERCEL && !(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN)) return;
+  try {
+    await run(MARKET_INSERT, marketInsertArgs(input, createdAt));
+  } catch (error) {
+    console.warn(error instanceof Error ? `Local market cache write failed: ${error.message}` : "Local market cache write failed");
+  }
 }
 
 export async function insertMarket(input: {
@@ -284,36 +457,67 @@ export async function insertMarket(input: {
     (error as Error & { market?: Market }).market = existing;
     throw error;
   }
-  await run(
-    `INSERT INTO markets (
-        github_repo_id, owner, name, full_name, description, stars, forks, language, avatar_url, html_url,
-        coin_name, symbol, mint, metadata_uri, image_url, launcher, bonding_complete, pumpswap_pool, confirmed, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 1, ?)`,
-    [
-      input.repo.githubRepoId,
-      input.repo.owner,
-      input.repo.name,
-      input.repo.fullName,
-      input.repo.description,
-      input.repo.stars,
-      input.repo.forks,
-      input.repo.language,
-      input.repo.avatarUrl,
-      input.repo.htmlUrl,
-      input.coinName,
-      input.symbol,
-      input.mint,
-      input.metadataUri,
-      input.imageUrl,
-      input.launcher,
-      new Date().toISOString(),
-    ],
-  );
+  const createdAt = new Date().toISOString();
+  if (supabaseConfigured()) {
+    const supabase = createSupabaseClient();
+    const { error } = await supabase.from("markets").insert({
+      github_repo_id: input.repo.githubRepoId,
+      owner: input.repo.owner,
+      name: input.repo.name,
+      full_name: input.repo.fullName,
+      description: input.repo.description,
+      stars: input.repo.stars,
+      forks: input.repo.forks,
+      language: input.repo.language,
+      avatar_url: input.repo.avatarUrl,
+      html_url: input.repo.htmlUrl,
+      coin_name: input.coinName,
+      symbol: input.symbol,
+      mint: input.mint,
+      metadata_uri: input.metadataUri,
+      image_url: input.imageUrl,
+      launcher: input.launcher,
+      bonding_complete: false,
+      pumpswap_pool: null,
+      confirmed: true,
+      status: "launched",
+      created_at: createdAt,
+    });
+    if (error) {
+      if (error.code === "23505") {
+        const duplicate = new Error("This GitHub repo id already has a market.");
+        throw duplicate;
+      }
+      throw new Error(error.message);
+    }
+    await cacheMarketLocally(input, createdAt);
+    return await getMarketByMint(input.mint);
+  }
+  await run(MARKET_INSERT, marketInsertArgs(input, createdAt));
   return await getMarketByMint(input.mint);
 }
 
 export async function updateCurve(mint: string, bondingComplete: boolean, pumpswapPool: string | null) {
-  await run("UPDATE markets SET bonding_complete = ?, pumpswap_pool = ? WHERE mint = ?", [bondingComplete ? 1 : 0, pumpswapPool, mint]);
+  if (supabaseConfigured()) {
+    const supabase = createSupabaseClient();
+    const { error } = await supabase
+      .from("markets")
+      .update({
+        bonding_complete: bondingComplete,
+        pumpswap_pool: pumpswapPool,
+        status: bondingComplete ? "graduated" : "launched",
+      })
+      .eq("mint", mint);
+    if (error) throw new Error(error.message);
+  }
+  if (!(process.env.VERCEL && !(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN))) {
+    try {
+      await run("UPDATE markets SET bonding_complete = ?, pumpswap_pool = ? WHERE mint = ?", [bondingComplete ? 1 : 0, pumpswapPool, mint]);
+    } catch (error) {
+      if (!supabaseConfigured()) throw error;
+      console.warn(error instanceof Error ? `Local curve cache update failed: ${error.message}` : "Local curve cache update failed");
+    }
+  }
   return await getMarketByMint(mint);
 }
 

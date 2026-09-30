@@ -19,6 +19,8 @@ Requires Node 22 (built-in `node:sqlite` for the local registry at `data/gitfuel
 
 The local SQLite file cannot persist in Vercel Functions. Connect a Turso database and set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in the Vercel project environment before enabling launches. The tables are created on first use. Redeploy after adding the variables. Without both values, the public site remains readable, while launches and claims are disabled so no signed transaction depends on an ephemeral registry.
 
+Public launch listings use Supabase. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, then run `supabase/migrations/20260930120000_markets.sql` in the Supabase SQL editor. New markets are written there from the launch API and shown on the home page, newest first. SQLite (or Turso) still caches repos, metadata, and claims.
+
 ## Solana RPC
 
 GitFuel connects to Solana mainnet-beta. The public mainnet RPC is used by default. Set `NEXT_PUBLIC_SOLANA_RPC_URL` for a browser RPC and `SOLANA_RPC_URL` for API routes that confirm create signatures. Both custom endpoints must point to mainnet-beta. Launches require a funded mainnet wallet.

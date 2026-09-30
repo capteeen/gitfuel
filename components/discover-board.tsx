@@ -6,12 +6,12 @@ import { ArrowRight, ArrowUpRight, Flame, GitBranch, Search, SlidersHorizontal, 
 import type { Market } from "@/lib/types";
 import { RepositoryTable } from "./repository-table";
 
-export function DiscoverBoard({ markets }: { markets: Market[] }) {
+export function DiscoverBoard({ markets, loadError = null }: { markets: Market[]; loadError?: string | null }) {
   const [q, setQ] = useState("");
   const [language, setLanguage] = useState("");
   const [minStars, setMinStars] = useState("0");
   const [status, setStatus] = useState("");
-  const [sort, setSort] = useState("stars");
+  const [sort, setSort] = useState("newest");
   const [showAll, setShowAll] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const languages = useMemo(
@@ -174,7 +174,15 @@ export function DiscoverBoard({ markets }: { markets: Market[] }) {
         )}
       </div>
       <div id="repository-results">
-      <RepositoryTable markets={showAll ? visible : visible.slice(0, 5)} emptyContent={markets.length === 0 ? (
+      <RepositoryTable markets={showAll ? visible : visible.slice(0, 5)} emptyContent={loadError ? (
+        <div className="empty-state">
+          <span className="empty-icon">
+            <GitBranch size={22} aria-hidden="true" />
+          </span>
+          <h3 className="text-lg font-medium text-white">Launches could not be loaded right now.</h3>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-ff-muted">Refresh the page to try again.</p>
+        </div>
+      ) : markets.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon">
             <GitBranch size={22} aria-hidden="true" />

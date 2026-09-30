@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Check, Eye, Star } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Market } from "@/lib/types";
-import { formatStars } from "@/lib/format";
+import { formatLaunched, formatStars, shortKey } from "@/lib/format";
 
 export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; emptyContent?: ReactNode }) {
   return (
@@ -14,6 +14,8 @@ export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; 
             <th scope="col" className="repo-rank">#</th>
             <th scope="col">Repository</th>
             <th scope="col">Token</th>
+            <th scope="col">Mint</th>
+            <th scope="col">Launched</th>
             <th scope="col">Market cap</th>
             <th scope="col">24h volume</th>
             <th scope="col">Builder earnings</th>
@@ -38,7 +40,13 @@ export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; 
                     </div>
                   </div>
                 </td>
-                <td><span className="repo-symbol" title={market.symbol}>${market.symbol}</span><span className="repo-secondary">{market.bondingComplete ? "PumpSwap" : "Bonding curve"}</span></td>
+                <td>
+                  <span className="repo-symbol" title={market.coinName}>${market.symbol}</span>
+                  <span className="repo-secondary">{market.coinName}</span>
+                  <span className="repo-secondary">{market.bondingComplete ? "PumpSwap" : "Bonding curve"}</span>
+                </td>
+                <td>{market.mint ? <span className="repo-mint" title={market.mint}>{shortKey(market.mint, 4)}</span> : <span className="repo-unavailable">—</span>}</td>
+                <td><time className="repo-launched" dateTime={market.createdAt}>{formatLaunched(market.createdAt)}</time></td>
                 <td><UnavailableMetric label="Market cap" /></td>
                 <td><UnavailableMetric label="24-hour volume" /></td>
                 <td><UnavailableMetric label="Builder earnings" /></td>

@@ -15,7 +15,14 @@ test("Vercel without a registry serves public pages and blocks launch writes", a
   const port = await freePort();
   const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(port)], {
     cwd: process.cwd(),
-    env: { ...process.env, VERCEL: "1", TURSO_DATABASE_URL: "", TURSO_AUTH_TOKEN: "" },
+    env: {
+      ...process.env,
+      VERCEL: "1",
+      TURSO_DATABASE_URL: "",
+      TURSO_AUTH_TOKEN: "",
+      NEXT_PUBLIC_SUPABASE_URL: "",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",
+    },
     stdio: "ignore",
   });
   const base = `http://127.0.0.1:${port}`;
