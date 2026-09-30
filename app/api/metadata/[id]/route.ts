@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getRepo, launchRegistryBlock, readMetadata, saveMetadata, storageConfigured } from "@/lib/db";
+import { getMarketByGithubId, getRepo, launchRegistryBlock, readMetadata, saveMetadata, storageConfigured } from "@/lib/db";
+import { supabaseConfigured } from "@/lib/supabase";
 import { resolveRepoById } from "@/lib/github";
 
 export const runtime = "nodejs";
@@ -36,7 +37,11 @@ export async function POST(request: Request) {
   if (!repo || repo.htmlUrl !== parsed.data.website) {
     return NextResponse.json({ error: "Website must stay the cached GitHub URL for this id." }, { status: 400 });
   }
-  if (!storageConfigured() && !process.env.PINATA_JWT) {
+  const existing = await getMarketByGithubId(repo.githubRepoId);
+  if (existing) {
+    return NextResponse.json({ error: "This GitHub repo id already has a market.", market: existing }, { status: 409 });
+  }
+  if (!storageConfigured() && !process.env.PINATA_JWT && !supabaseConfigured()) {
     return NextResponse.json({ error: "Metadata hosting needs PINATA_JWT or a persistent repo cache." }, { status: 503 });
   }
   const document = {
@@ -68,6 +73,12 @@ export async function POST(request: Request) {
     if (!pinned.IpfsHash) return NextResponse.json({ error: "Pinata did not return a hash." }, { status: 502 });
     uri = `https://gateway.pinata.cloud/ipfs/${pinned.IpfsHash}`;
   }
-  await saveMetadata(repo.githubRepoId, JSON.stringify(document));
+  try {
+    await saveMetadata(repo, JSON.stringify(document), uri);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not store metadata.";
+    const status = message.includes("already has a market") ? 409 : 503;
+    return NextResponse.json({ error: message }, { status });
+  }
   return NextResponse.json({ uri, hostedLocally: !process.env.PINATA_JWT });
 }

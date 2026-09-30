@@ -1,4 +1,15 @@
-import { ComputeBudgetProgram, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, Transaction, type TransactionInstruction } from "@solana/web3.js";
+import {
+  ComputeBudgetProgram,
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SendTransactionError,
+  Transaction,
+  TransactionMessage,
+  VersionedTransaction,
+  type TransactionInstruction,
+} from "@solana/web3.js";
 import BN from "bn.js";
 import {
   OnlinePumpSdk,
@@ -27,22 +38,93 @@ function uiToRaw(value: string, decimals: number) {
   return new BN(whole).mul(new BN(10).pow(new BN(decimals))).add(new BN(frac || "0"));
 }
 
+type SendOptions = {
+  units?: number;
+  microLamports?: number;
+  simulate?: boolean;
+  onStatus?: (message: string) => void;
+};
+
+export function explainProgramLogs(logs: string[] | null | undefined) {
+  if (!logs?.length) return null;
+  const anchor = [...logs].reverse().find((line) => /AnchorError|Error Number|custom program error/i.test(line));
+  if (anchor) return anchor.replace(/^Program log: /, "");
+  const failed = [...logs].reverse().find((line) => /insufficient lamports|insufficient funds|already in use/i.test(line));
+  return failed ? failed.replace(/^Program log: /, "") : null;
+}
+
+function explainSendError(error: unknown) {
+  if (error instanceof SendTransactionError) {
+    const fromLogs = explainProgramLogs(error.logs ?? error.transactionError?.logs);
+    if (fromLogs) return new Error(fromLogs);
+  }
+  return error instanceof Error ? error : new Error("The transaction failed.");
+}
+
+async function assertLaunchSimulates(connection: Connection, payer: PublicKey, instructions: TransactionInstruction[]) {
+  const { blockhash } = await connection.getLatestBlockhash("confirmed");
+  const message = new TransactionMessage({
+    payerKey: payer,
+    recentBlockhash: blockhash,
+    instructions,
+  }).compileToV0Message();
+  const simulation = await connection.simulateTransaction(new VersionedTransaction(message), {
+    sigVerify: false,
+    replaceRecentBlockhash: true,
+    commitment: "processed",
+  });
+  if (simulation.value.err) {
+    throw new Error(explainProgramLogs(simulation.value.logs) || "pump.fun rejected create_v2 in simulation. Nothing was signed.");
+  }
+  return simulation.value.unitsConsumed ?? null;
+}
+
 async function sendInstructions(
   connection: Connection,
   wallet: WalletSigner,
   instructions: TransactionInstruction[],
   extra: Keypair[] = [],
+  options: SendOptions = {},
 ) {
+  const budget = [
+    ComputeBudgetProgram.setComputeUnitLimit({ units: options.units ?? 400_000 }),
+    ...(options.microLamports
+      ? [ComputeBudgetProgram.setComputeUnitPrice({ microLamports: options.microLamports })]
+      : []),
+  ];
+  const all = [...budget, ...instructions];
+  if (options.simulate) {
+    options.onStatus?.("Checking create_v2 against pump.fun…");
+    const units = await assertLaunchSimulates(connection, wallet.publicKey, all);
+    options.onStatus?.(
+      units
+        ? `Simulation passed (${units.toLocaleString()} CU). Waiting for the wallet to sign create_v2…`
+        : "Simulation passed. Waiting for the wallet to sign create_v2…",
+    );
+  }
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
   const tx = new Transaction();
-  tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }), ...instructions);
+  tx.add(...all);
   tx.feePayer = wallet.publicKey;
   tx.recentBlockhash = blockhash;
   if (extra.length) tx.partialSign(...extra);
-  const signed = await wallet.signTransaction(tx);
-  const signature = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
-  await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-  return signature;
+  let signed: Transaction;
+  try {
+    signed = await wallet.signTransaction(tx);
+  } catch (error) {
+    throw explainSendError(error);
+  }
+  for (const keypair of extra) {
+    const slot = signed.signatures.find((entry) => entry.publicKey.equals(keypair.publicKey));
+    if (!slot?.signature) signed.partialSign(keypair);
+  }
+  try {
+    const signature = await connection.sendRawTransaction(signed.serialize(), { skipPreflight: false });
+    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+    return signature;
+  } catch (error) {
+    throw explainSendError(error);
+  }
 }
 
 export async function readCurve(connection: Connection, mintAddress: string) {
@@ -76,19 +158,49 @@ export async function readCurve(connection: Connection, mintAddress: string) {
   };
 }
 
+export async function quoteInitialBuy(connection: Connection, sol: number) {
+  if (!(sol > 0) || !Number.isFinite(sol)) return null;
+  const lamports = Math.round(sol * LAMPORTS_PER_SOL);
+  if (lamports <= 0) return null;
+  const online = new OnlinePumpSdk(connection);
+  const [global, feeConfig] = await Promise.all([
+    online.fetchGlobal(),
+    online.fetchFeeConfig().catch(() => null),
+  ]);
+  const quoteAmount = new BN(lamports);
+  const amount = getBuyTokenAmountFromSolAmount({
+    global,
+    feeConfig,
+    mintSupply: null,
+    bondingCurve: null,
+    amount: quoteAmount,
+    quoteMint: NATIVE_MINT,
+  });
+  return { tokensRaw: amount.toString(), maxSol: sol * 1.01 };
+}
+
 export async function createCoin(
   connection: Connection,
   wallet: WalletSigner,
   input: { name: string; symbol: string; uri: string; solBuy?: number },
+  onStatus?: (message: string) => void,
 ) {
+  const name = input.name.trim();
+  const symbol = input.symbol.trim();
+  if (!name || name.length > 32) throw new Error("Name must be 1–32 characters.");
+  if (!/^[A-Z0-9]{1,10}$/.test(symbol)) throw new Error("Symbol must be 1–10 letters or numbers.");
   const online = new OnlinePumpSdk(connection);
   const global = await online.fetchGlobal();
   const feeConfig = await online.fetchFeeConfig().catch(() => null);
   const mintKeypair = Keypair.generate();
   const user = wallet.publicKey;
+  const lamports = input.solBuy && input.solBuy > 0 ? Math.round(input.solBuy * LAMPORTS_PER_SOL) : 0;
+  if (input.solBuy != null && input.solBuy !== 0 && !Number.isFinite(input.solBuy)) {
+    throw new Error("First buy must be a SOL amount.");
+  }
   let instructions: TransactionInstruction[];
-  if (input.solBuy && input.solBuy > 0) {
-    const quoteAmount = new BN(Math.round(input.solBuy * LAMPORTS_PER_SOL));
+  if (lamports > 0) {
+    const quoteAmount = new BN(lamports);
     const amount = getBuyTokenAmountFromSolAmount({
       global,
       feeConfig,
@@ -100,29 +212,36 @@ export async function createCoin(
     instructions = await PUMP_SDK.createV2AndBuyV2Instructions({
       global,
       mint: mintKeypair.publicKey,
-      name: input.name,
-      symbol: input.symbol,
+      name,
+      symbol,
       uri: input.uri,
       creator: user,
       user,
       amount,
       quoteAmount,
       mayhemMode: false,
+      cashback: false,
     });
   } else {
     instructions = [
       await PUMP_SDK.createV2Instruction({
         mint: mintKeypair.publicKey,
-        name: input.name,
-        symbol: input.symbol,
+        name,
+        symbol,
         uri: input.uri,
         creator: user,
         user,
         mayhemMode: false,
+        cashback: false,
       }),
     ];
   }
-  const signature = await sendInstructions(connection, wallet, instructions, [mintKeypair]);
+  const signature = await sendInstructions(connection, wallet, instructions, [mintKeypair], {
+    units: 600_000,
+    microLamports: 200_000,
+    simulate: true,
+    onStatus,
+  });
   return { signature, mint: mintKeypair.publicKey.toBase58() };
 }
 

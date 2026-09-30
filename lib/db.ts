@@ -328,9 +328,13 @@ function matchesFilters(market: Market, filters: MarketFilters) {
   return true;
 }
 
+function isMetadataDraft(value: unknown) {
+  return text(row(value).status) === "test";
+}
+
 async function supabaseMarkets() {
   const supabase = createSupabaseClient();
-  const { data, error } = await supabase.from("markets").select("*").order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("markets").select("*").neq("status", "test").order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return overlayClaims((data ?? []).map((item) => toMarket(item)));
 }
@@ -384,7 +388,7 @@ export async function getMarketByGithubId(githubRepoId: number) {
       const supabase = createSupabaseClient();
       const { data, error } = await supabase.from("markets").select("*").eq("github_repo_id", githubRepoId).maybeSingle();
       if (error) throw new Error(error.message);
-      if (!data) return null;
+      if (!data || isMetadataDraft(data)) return null;
       const [market] = await overlayClaims([toMarket(data)]);
       return market ?? null;
     } catch (error) {
@@ -402,7 +406,7 @@ export async function getMarketByMint(mint: string) {
       const supabase = createSupabaseClient();
       const { data, error } = await supabase.from("markets").select("*").eq("mint", mint).maybeSingle();
       if (error) throw new Error(error.message);
-      if (!data) return null;
+      if (!data || isMetadataDraft(data)) return null;
       const [market] = await overlayClaims([toMarket(data)]);
       return market ?? null;
     } catch (error) {
@@ -427,7 +431,7 @@ export async function listLanguages() {
   try {
     if (supabaseConfigured()) {
       const supabase = createSupabaseClient();
-      const { data, error } = await supabase.from("markets").select("language");
+      const { data, error } = await supabase.from("markets").select("language").neq("status", "test");
       if (error) throw new Error(error.message);
       const languages = (data ?? [])
         .map((item) => nullable(row(item).language))
@@ -513,12 +517,23 @@ export async function insertMarket(input: {
   const createdAt = new Date().toISOString();
   if (supabaseConfigured()) {
     const supabase = createSupabaseClient();
+    const { data: draft, error: draftError } = await supabase
+      .from("markets")
+      .select("*")
+      .eq("github_repo_id", input.repo.githubRepoId)
+      .eq("status", "test")
+      .maybeSingle();
+    if (draftError) throw new Error(draftError.message);
+    if (draft) {
+      const { error: deleteError } = await supabase.from("markets").delete().eq("github_repo_id", input.repo.githubRepoId).eq("status", "test");
+      if (deleteError) throw new Error(deleteError.message);
+    }
     const { error } = await supabase.from("markets").insert({
       github_repo_id: input.repo.githubRepoId,
       owner: input.repo.owner,
       name: input.repo.name,
       full_name: input.repo.fullName,
-      description: input.repo.description,
+      description: draft ? (draft.description ?? "") : input.repo.description,
       stars: input.repo.stars,
       forks: input.repo.forks,
       language: input.repo.language,
@@ -537,6 +552,7 @@ export async function insertMarket(input: {
       created_at: createdAt,
     });
     if (error) {
+      if (draft) await supabase.from("markets").insert(draft);
       if (error.code === "23505") {
         const duplicate = new Error("This GitHub repo id already has a market.");
         throw duplicate;
@@ -560,7 +576,8 @@ export async function updateCurve(mint: string, bondingComplete: boolean, pumpsw
         pumpswap_pool: pumpswapPool,
         status: bondingComplete ? "graduated" : "launched",
       })
-      .eq("mint", mint);
+      .eq("mint", mint)
+      .neq("status", "test");
     if (error) throw new Error(error.message);
   }
   if (!(process.env.VERCEL && !(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN))) {
@@ -574,18 +591,84 @@ export async function updateCurve(mint: string, bondingComplete: boolean, pumpsw
   return await getMarketByMint(mint);
 }
 
-export async function saveMetadata(githubRepoId: number, body: string) {
+const METADATA_DRAFT_LAUNCHER = "GitFuelMetadataDraftLauncher0001";
+
+function metadataDraftMint(githubRepoId: number) {
+  return `gitfuelmd${String(githubRepoId).padStart(24, "0")}`;
+}
+
+function metadataDocument(record: Record<string, unknown>) {
+  const image = nullable(record.image_url);
+  const website = nullable(record.html_url);
+  const name = text(record.coin_name);
+  const symbol = text(record.symbol);
+  if (!name || !symbol || !image || !website) return null;
+  return JSON.stringify({
+    name,
+    symbol,
+    description: nullable(record.description) ?? "",
+    image,
+    showName: true,
+    createdOn: "https://gitfuel.xyz",
+    website,
+    external_url: website,
+    attributes: [{ trait_type: "github_repo_id", value: String(num(record.github_repo_id)) }],
+  });
+}
+
+async function saveMetadataDraft(repo: RepoPreview, body: string, metadataUri: string) {
+  const document = JSON.parse(body) as { name?: string; symbol?: string; description?: string; image?: string };
+  if (!document.name || !document.symbol || !document.image) {
+    throw new Error("Metadata is incomplete.");
+  }
+  const supabase = createSupabaseClient();
+  const row = {
+    github_repo_id: repo.githubRepoId,
+    owner: repo.owner,
+    name: repo.name,
+    full_name: repo.fullName,
+    description: document.description ?? "",
+    stars: repo.stars,
+    forks: repo.forks,
+    language: repo.language,
+    avatar_url: repo.avatarUrl,
+    html_url: repo.htmlUrl,
+    coin_name: document.name,
+    symbol: document.symbol,
+    mint: metadataDraftMint(repo.githubRepoId),
+    metadata_uri: metadataUri,
+    image_url: document.image,
+    launcher: METADATA_DRAFT_LAUNCHER,
+    bonding_complete: false,
+    pumpswap_pool: null,
+    confirmed: true,
+    status: "test",
+  };
+  const { error: deleteError } = await supabase.from("markets").delete().eq("github_repo_id", repo.githubRepoId).eq("status", "test");
+  if (deleteError) throw new Error(deleteError.message);
+  const { error } = await supabase.from("markets").insert(row);
+  if (error?.code === "23505") throw new Error("This GitHub repo id already has a market.");
+  if (error) throw new Error(error.message);
+}
+
+export async function saveMetadata(repo: RepoPreview, body: string, metadataUri: string) {
+  if (supabaseConfigured()) await saveMetadataDraft(repo, body, metadataUri);
   if (!storageConfigured()) return;
   await run(
     `INSERT INTO metadata (github_repo_id, body) VALUES (?, ?)
        ON CONFLICT(github_repo_id) DO UPDATE SET body = excluded.body`,
-    [githubRepoId, body],
+    [repo.githubRepoId, body],
   );
 }
 
 export async function readMetadata(githubRepoId: number) {
   const [found] = await all("SELECT body FROM metadata WHERE github_repo_id = ?", [githubRepoId]);
-  return found ? text(row(found).body) : null;
+  if (found) return text(row(found).body);
+  if (!supabaseConfigured()) return null;
+  const supabase = createSupabaseClient();
+  const { data, error } = await supabase.from("markets").select("*").eq("github_repo_id", githubRepoId).maybeSingle();
+  if (error || !data) return null;
+  return metadataDocument(row(data));
 }
 
 export async function getClaim(githubRepoId: number): Promise<ClaimRecord | null> {
