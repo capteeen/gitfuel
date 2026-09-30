@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertConfirmedCreate } from "@/lib/confirm-tx";
-import { getMarketByGithubId, insertMarket, listLanguages, listMarkets } from "@/lib/db";
+import { getMarketByGithubId, insertMarket, listLanguages, listMarkets, storageConfigured } from "@/lib/db";
 import { resolvePublicRepo } from "@/lib/github";
 
 export const runtime = "nodejs";
@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const minStars = Number(searchParams.get("minStars") || "0");
-  const markets = listMarkets({
+  const markets = await listMarkets({
     q: searchParams.get("q") || undefined,
     language: searchParams.get("language") || undefined,
     minStars: Number.isFinite(minStars) ? minStars : 0,
     claim: searchParams.get("claim") || undefined,
     stage: searchParams.get("stage") || undefined,
   });
-  return NextResponse.json({ markets, languages: listLanguages() });
+  return NextResponse.json({ markets, languages: await listLanguages() });
 }
 
 const bodySchema = z.object({
@@ -34,6 +34,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!storageConfigured()) {
+    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  }
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
@@ -44,12 +47,12 @@ export async function POST(request: Request) {
     if (repo.githubRepoId !== parsed.data.githubRepoId) {
       return NextResponse.json({ error: "GitHub id does not match a fresh lookup of that repo." }, { status: 400 });
     }
-    const existing = getMarketByGithubId(repo.githubRepoId);
+    const existing = await getMarketByGithubId(repo.githubRepoId);
     if (existing) {
       return NextResponse.json({ error: "This GitHub repo id already has a market.", market: existing }, { status: 409 });
     }
     await assertConfirmedCreate(parsed.data.signature, parsed.data.mint, parsed.data.launcher);
-    const market = insertMarket({
+    const market = await insertMarket({
       repo,
       coinName: parsed.data.coinName,
       symbol: parsed.data.symbol,

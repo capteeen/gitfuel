@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { addClaimEvent, getClaim, getMarketByGithubId, saveClaim } from "@/lib/db";
+import { addClaimEvent, getClaim, getMarketByGithubId, saveClaim, storageConfigured } from "@/lib/db";
 import { githubPermission } from "@/lib/github";
 import { getSession } from "@/lib/session";
 
@@ -13,15 +13,18 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!storageConfigured()) {
+    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  }
   const session = await getSession();
   if (!session.accessToken || !session.githubLogin || !session.githubUserId) {
     return NextResponse.json({ error: "Sign in with GitHub before the permission check." }, { status: 401 });
   }
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Repo id and wallet are required." }, { status: 400 });
-  const market = getMarketByGithubId(parsed.data.githubRepoId);
+  const market = await getMarketByGithubId(parsed.data.githubRepoId);
   if (!market) return NextResponse.json({ error: "No market for that GitHub id." }, { status: 404 });
-  const existing = getClaim(market.githubRepoId);
+  const existing = await getClaim(market.githubRepoId);
   if (existing?.status === "active" && existing.githubUserId !== session.githubUserId) {
     return NextResponse.json(
       {
@@ -54,8 +57,8 @@ export async function POST(request: Request) {
       permission: ownerMatch ? "owner" : checked.permission,
       verifiedAt: new Date().toISOString(),
     };
-    saveClaim(claim);
-    addClaimEvent(market.githubRepoId, "verified", `@${session.githubLogin} passed as ${claim.permission}. Wallet not bound yet.`);
+    await saveClaim(claim);
+    await addClaimEvent(market.githubRepoId, "verified", `@${session.githubLogin} passed as ${claim.permission}. Wallet not bound yet.`);
     return NextResponse.json({ claim, market, eligible: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Permission check failed.";

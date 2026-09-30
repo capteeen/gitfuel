@@ -4,8 +4,8 @@ import { listMarkets } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  const markets = listMarkets();
+export default async function HomePage() {
+  const markets = await listMarkets();
   return (
     <>
       <Hero markets={markets} />

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getRepo, readMetadata, saveMetadata } from "@/lib/db";
+import { getRepo, readMetadata, saveMetadata, storageConfigured } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
-  const body = readMetadata(Number(id));
+  const body = await readMetadata(Number(id));
   if (!body) return NextResponse.json({ error: "Metadata missing." }, { status: 404 });
   return new NextResponse(body, {
     headers: { "content-type": "application/json", "cache-control": "public, max-age=60" },
@@ -24,10 +24,13 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!storageConfigured()) {
+    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  }
   const json = await request.json().catch(() => null);
   const parsed = schema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Metadata is incomplete." }, { status: 400 });
-  const repo = getRepo(parsed.data.githubRepoId);
+  const repo = await getRepo(parsed.data.githubRepoId);
   if (!repo || repo.htmlUrl !== parsed.data.website) {
     return NextResponse.json({ error: "Website must stay the cached GitHub URL for this id." }, { status: 400 });
   }
@@ -60,6 +63,6 @@ export async function POST(request: Request) {
     if (!pinned.IpfsHash) return NextResponse.json({ error: "Pinata did not return a hash." }, { status: 502 });
     uri = `https://gateway.pinata.cloud/ipfs/${pinned.IpfsHash}`;
   }
-  saveMetadata(repo.githubRepoId, JSON.stringify(document));
+  await saveMetadata(repo.githubRepoId, JSON.stringify(document));
   return NextResponse.json({ uri, hostedLocally: !process.env.PINATA_JWT });
 }

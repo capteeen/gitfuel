@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { addClaimEvent, getClaim, saveClaim } from "@/lib/db";
+import { addClaimEvent, getClaim, saveClaim, storageConfigured } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -12,13 +12,16 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!storageConfigured()) {
+    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  }
   const session = await getSession();
   if (!session.githubUserId || !session.githubLogin) {
     return NextResponse.json({ error: "GitHub session missing." }, { status: 401 });
   }
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Repo id and wallet are required." }, { status: 400 });
-  const claim = getClaim(parsed.data.githubRepoId);
+  const claim = await getClaim(parsed.data.githubRepoId);
   if (!claim || claim.githubUserId !== session.githubUserId) {
     return NextResponse.json({ error: "Verify adminship before binding a wallet." }, { status: 400 });
   }
@@ -26,8 +29,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This claim is revoked. Phase 1 does not run a dispute process." }, { status: 409 });
   }
   const next = { ...claim, solanaPubkey: parsed.data.wallet, status: "active" as const };
-  saveClaim(next);
-  addClaimEvent(
+  await saveClaim(next);
+  await addClaimEvent(
     claim.githubRepoId,
     "bound",
     `@${session.githubLogin} bound ${parsed.data.wallet}. Proof of control at verification time, not a legal ownership finding.`,

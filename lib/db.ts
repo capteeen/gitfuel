@@ -1,16 +1,14 @@
 import fs from "fs";
 import path from "path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
+import type { Client } from "@libsql/client/web";
 import type { ClaimEvent, ClaimRecord, ClaimStatus, Market, RepoPreview } from "./types";
 
-let db: DatabaseSync | null = null;
+let db: Promise<DatabaseSync> | null = null;
+let remote: Promise<Client> | null = null;
+type SqlValue = string | number | null;
 
-function database() {
-  if (db) return db;
-  const dir = path.join(process.cwd(), "data");
-  fs.mkdirSync(dir, { recursive: true });
-  db = new DatabaseSync(path.join(dir, "gitfuel.sqlite"));
-  db.exec(`
+const schema = `
     CREATE TABLE IF NOT EXISTS repos (
       github_repo_id INTEGER PRIMARY KEY,
       owner TEXT NOT NULL,
@@ -66,8 +64,61 @@ function database() {
       github_repo_id INTEGER PRIMARY KEY,
       body TEXT NOT NULL
     );
-  `);
+  `;
+
+export function storageConfigured() {
+  return !process.env.VERCEL || Boolean(process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN);
+}
+
+function requirePersistentStorage() {
+  if (!storageConfigured()) {
+    throw new Error("Market registry unavailable: configure TURSO_DATABASE_URL and TURSO_AUTH_TOKEN before launching or claiming.");
+  }
+}
+
+async function database() {
+  if (db) return db;
+  db = (async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const dir = path.join(process.cwd(), "data");
+    fs.mkdirSync(dir, { recursive: true });
+    const local = new DatabaseSync(path.join(dir, "gitfuel.sqlite"));
+    local.exec(schema);
+    return local;
+  })();
   return db;
+}
+
+async function remoteDatabase() {
+  if (!remote) {
+    remote = (async () => {
+      const { createClient } = await import("@libsql/client/web");
+      const client = createClient({
+        url: process.env.TURSO_DATABASE_URL!,
+        authToken: process.env.TURSO_AUTH_TOKEN!,
+      });
+      await client.batch(schema.split(";").map((sql) => sql.trim()).filter(Boolean), "write");
+      return client;
+    })();
+  }
+  return remote;
+}
+
+async function all(sql: string, args: SqlValue[] = []): Promise<unknown[]> {
+  if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+    return (await (await remoteDatabase()).execute({ sql, args })).rows;
+  }
+  if (process.env.VERCEL) return [];
+  return (await database()).prepare(sql).all(...args);
+}
+
+async function run(sql: string, args: SqlValue[] = []) {
+  requirePersistentStorage();
+  if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+    await (await remoteDatabase()).execute({ sql, args });
+  } else {
+    (await database()).prepare(sql).run(...args);
+  }
 }
 
 function num(value: unknown) {
@@ -135,10 +186,9 @@ const MARKET_SELECT = `
   LEFT JOIN claims c ON c.github_repo_id = m.github_repo_id
 `;
 
-export function upsertRepo(repo: RepoPreview) {
-  database()
-    .prepare(
-      `INSERT INTO repos (
+export async function upsertRepo(repo: RepoPreview) {
+  await run(
+    `INSERT INTO repos (
         github_repo_id, owner, name, full_name, description, stars, forks, language, avatar_url, html_url, fetched_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(github_repo_id) DO UPDATE SET
@@ -152,8 +202,7 @@ export function upsertRepo(repo: RepoPreview) {
         avatar_url = excluded.avatar_url,
         html_url = excluded.html_url,
         fetched_at = excluded.fetched_at`,
-    )
-    .run(
+    [
       repo.githubRepoId,
       repo.owner,
       repo.name,
@@ -165,25 +214,26 @@ export function upsertRepo(repo: RepoPreview) {
       repo.avatarUrl,
       repo.htmlUrl,
       new Date().toISOString(),
-    );
+    ],
+  );
 }
 
-export function getRepo(githubRepoId: number) {
-  const found = database().prepare("SELECT * FROM repos WHERE github_repo_id = ?").get(githubRepoId);
+export async function getRepo(githubRepoId: number) {
+  const [found] = await all("SELECT * FROM repos WHERE github_repo_id = ?", [githubRepoId]);
   return found ? toRepo(found) : null;
 }
 
-export function getMarketByGithubId(githubRepoId: number) {
-  const found = database().prepare(`${MARKET_SELECT} WHERE m.github_repo_id = ?`).get(githubRepoId);
+export async function getMarketByGithubId(githubRepoId: number) {
+  const [found] = await all(`${MARKET_SELECT} WHERE m.github_repo_id = ?`, [githubRepoId]);
   return found ? toMarket(found) : null;
 }
 
-export function getMarketByMint(mint: string) {
-  const found = database().prepare(`${MARKET_SELECT} WHERE m.mint = ?`).get(mint);
+export async function getMarketByMint(mint: string) {
+  const [found] = await all(`${MARKET_SELECT} WHERE m.mint = ?`, [mint]);
   return found ? toMarket(found) : null;
 }
 
-export function listMarkets(filters: {
+export async function listMarkets(filters: {
   q?: string;
   language?: string;
   minStars?: number;
@@ -210,21 +260,16 @@ export function listMarkets(filters: {
   if (filters.stage === "bonding") clauses.push("m.bonding_complete = 0");
   if (filters.stage === "graduated") clauses.push("m.bonding_complete = 1");
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-  return database()
-    .prepare(`${MARKET_SELECT} ${where} ORDER BY m.created_at DESC`)
-    .all(...params)
-    .map(toMarket);
+  return (await all(`${MARKET_SELECT} ${where} ORDER BY m.created_at DESC`, params)).map(toMarket);
 }
 
-export function listLanguages() {
-  return database()
-    .prepare("SELECT DISTINCT language FROM markets WHERE language IS NOT NULL AND language != '' ORDER BY language")
-    .all()
+export async function listLanguages() {
+  return (await all("SELECT DISTINCT language FROM markets WHERE language IS NOT NULL AND language != '' ORDER BY language"))
     .map((item) => text(row(item).language))
     .filter(Boolean);
 }
 
-export function insertMarket(input: {
+export async function insertMarket(input: {
   repo: RepoPreview;
   coinName: string;
   symbol: string;
@@ -233,20 +278,18 @@ export function insertMarket(input: {
   imageUrl: string | null;
   launcher: string;
 }) {
-  const existing = getMarketByGithubId(input.repo.githubRepoId);
+  const existing = await getMarketByGithubId(input.repo.githubRepoId);
   if (existing) {
     const error = new Error("This GitHub repo id already has a market.");
     (error as Error & { market?: Market }).market = existing;
     throw error;
   }
-  database()
-    .prepare(
-      `INSERT INTO markets (
+  await run(
+    `INSERT INTO markets (
         github_repo_id, owner, name, full_name, description, stars, forks, language, avatar_url, html_url,
         coin_name, symbol, mint, metadata_uri, image_url, launcher, bonding_complete, pumpswap_pool, confirmed, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, 1, ?)`,
-    )
-    .run(
+    [
       input.repo.githubRepoId,
       input.repo.owner,
       input.repo.name,
@@ -264,33 +307,31 @@ export function insertMarket(input: {
       input.imageUrl,
       input.launcher,
       new Date().toISOString(),
-    );
-  return getMarketByMint(input.mint);
+    ],
+  );
+  return await getMarketByMint(input.mint);
 }
 
-export function updateCurve(mint: string, bondingComplete: boolean, pumpswapPool: string | null) {
-  database()
-    .prepare("UPDATE markets SET bonding_complete = ?, pumpswap_pool = ? WHERE mint = ?")
-    .run(bondingComplete ? 1 : 0, pumpswapPool, mint);
-  return getMarketByMint(mint);
+export async function updateCurve(mint: string, bondingComplete: boolean, pumpswapPool: string | null) {
+  await run("UPDATE markets SET bonding_complete = ?, pumpswap_pool = ? WHERE mint = ?", [bondingComplete ? 1 : 0, pumpswapPool, mint]);
+  return await getMarketByMint(mint);
 }
 
-export function saveMetadata(githubRepoId: number, body: string) {
-  database()
-    .prepare(
-      `INSERT INTO metadata (github_repo_id, body) VALUES (?, ?)
+export async function saveMetadata(githubRepoId: number, body: string) {
+  await run(
+    `INSERT INTO metadata (github_repo_id, body) VALUES (?, ?)
        ON CONFLICT(github_repo_id) DO UPDATE SET body = excluded.body`,
-    )
-    .run(githubRepoId, body);
+    [githubRepoId, body],
+  );
 }
 
-export function readMetadata(githubRepoId: number) {
-  const found = database().prepare("SELECT body FROM metadata WHERE github_repo_id = ?").get(githubRepoId);
+export async function readMetadata(githubRepoId: number) {
+  const [found] = await all("SELECT body FROM metadata WHERE github_repo_id = ?", [githubRepoId]);
   return found ? text(row(found).body) : null;
 }
 
-export function getClaim(githubRepoId: number): ClaimRecord | null {
-  const found = database().prepare("SELECT * FROM claims WHERE github_repo_id = ?").get(githubRepoId);
+export async function getClaim(githubRepoId: number): Promise<ClaimRecord | null> {
+  const [found] = await all("SELECT * FROM claims WHERE github_repo_id = ?", [githubRepoId]);
   if (!found) return null;
   const record = row(found);
   const status = text(record.status);
@@ -306,10 +347,9 @@ export function getClaim(githubRepoId: number): ClaimRecord | null {
   };
 }
 
-export function saveClaim(claim: ClaimRecord) {
-  database()
-    .prepare(
-      `INSERT INTO claims (
+export async function saveClaim(claim: ClaimRecord) {
+  await run(
+    `INSERT INTO claims (
         github_repo_id, github_user_id, github_login, solana_pubkey, status, permission, verified_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(github_repo_id) DO UPDATE SET
@@ -319,8 +359,7 @@ export function saveClaim(claim: ClaimRecord) {
         status = excluded.status,
         permission = excluded.permission,
         verified_at = excluded.verified_at`,
-    )
-    .run(
+    [
       claim.githubRepoId,
       claim.githubUserId,
       claim.githubLogin,
@@ -328,19 +367,16 @@ export function saveClaim(claim: ClaimRecord) {
       claim.status,
       claim.permission,
       claim.verifiedAt,
-    );
+    ],
+  );
 }
 
-export function addClaimEvent(githubRepoId: number, kind: string, detail: string) {
-  database()
-    .prepare("INSERT INTO claim_events (github_repo_id, kind, detail, created_at) VALUES (?, ?, ?, ?)")
-    .run(githubRepoId, kind, detail, new Date().toISOString());
+export async function addClaimEvent(githubRepoId: number, kind: string, detail: string) {
+  await run("INSERT INTO claim_events (github_repo_id, kind, detail, created_at) VALUES (?, ?, ?, ?)", [githubRepoId, kind, detail, new Date().toISOString()]);
 }
 
-export function listClaimEvents(githubRepoId: number): ClaimEvent[] {
-  return database()
-    .prepare("SELECT * FROM claim_events WHERE github_repo_id = ? ORDER BY id DESC LIMIT 20")
-    .all(githubRepoId)
+export async function listClaimEvents(githubRepoId: number): Promise<ClaimEvent[]> {
+  return (await all("SELECT * FROM claim_events WHERE github_repo_id = ? ORDER BY id DESC LIMIT 20", [githubRepoId]))
     .map((item) => {
       const record = row(item);
       return {

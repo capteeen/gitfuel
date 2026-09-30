@@ -7,8 +7,8 @@ export default async function RepoRoute({ params }: { params: Promise<{ githubId
   const { githubId } = await params;
   const id = Number(githubId);
   if (!Number.isInteger(id)) notFound();
-  const market = getMarketByGithubId(id);
+  const market = await getMarketByGithubId(id);
   if (market) redirect(`/market/${market.mint}`);
-  if (getRepo(id)) redirect(`/launch/preview?repo=${id}`);
+  if (await getRepo(id)) redirect(`/launch/preview?repo=${id}`);
   notFound();
 }

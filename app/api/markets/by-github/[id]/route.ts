@@ -10,8 +10,8 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!Number.isInteger(githubRepoId)) {
     return NextResponse.json({ error: "GitHub id must be numeric." }, { status: 400 });
   }
-  const market = getMarketByGithubId(githubRepoId);
-  const repo = getRepo(githubRepoId);
+  const market = await getMarketByGithubId(githubRepoId);
+  const repo = await getRepo(githubRepoId);
   if (!market && !repo) {
     return NextResponse.json({ error: "Repo not found / market missing." }, { status: 404 });
   }

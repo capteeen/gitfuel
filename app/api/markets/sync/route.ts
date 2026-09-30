@@ -3,7 +3,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { OnlinePumpSdk, PUMP_SDK, bondingCurvePda, canonicalPumpPoolPda } from "@pump-fun/pump-sdk";
 import { z } from "zod";
 import { serverRpc } from "@/lib/cluster";
-import { getMarketByMint, updateCurve } from "@/lib/db";
+import { getMarketByMint, storageConfigured, updateCurve } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,10 +11,13 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({ mint: z.string().min(32) });
 
 export async function POST(request: Request) {
+  if (!storageConfigured()) {
+    return NextResponse.json({ error: "Market registry is temporarily unavailable." }, { status: 503 });
+  }
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Mint required." }, { status: 400 });
-  const market = getMarketByMint(parsed.data.mint);
+  const market = await getMarketByMint(parsed.data.mint);
   if (!market) return NextResponse.json({ error: "Market missing." }, { status: 404 });
   try {
     const mint = new PublicKey(parsed.data.mint);
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
     if (curve.complete && !pumpswapPool) {
       await online.fetchGlobal();
     }
-    const updated = updateCurve(parsed.data.mint, curve.complete, pumpswapPool);
+    const updated = await updateCurve(parsed.data.mint, curve.complete, pumpswapPool);
     return NextResponse.json({ market: updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Curve sync failed.";

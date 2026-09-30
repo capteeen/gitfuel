@@ -8,7 +8,7 @@ export async function GET(_request: Request, context: { params: Promise<{ github
   const { githubId } = await context.params;
   const id = Number(githubId);
   if (!Number.isInteger(id)) return NextResponse.json({ error: "GitHub id must be numeric." }, { status: 400 });
-  const market = getMarketByGithubId(id);
+  const market = await getMarketByGithubId(id);
   if (!market) return NextResponse.json({ error: "Market missing." }, { status: 404 });
-  return NextResponse.json({ market, claim: getClaim(id), events: listClaimEvents(id) });
+  return NextResponse.json({ market, claim: await getClaim(id), events: await listClaimEvents(id) });
 }

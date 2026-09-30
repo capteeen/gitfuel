@@ -76,12 +76,12 @@ export async function resolvePublicRepo(owner: string, repo: string): Promise<Re
     avatarUrl: body.owner.avatar_url,
     htmlUrl: body.html_url,
   };
-  upsertRepo(preview);
+  await upsertRepo(preview);
   return preview;
 }
 
-export function repoResponse(repo: RepoPreview) {
-  return { repo, market: getMarketByGithubId(repo.githubRepoId) };
+export async function repoResponse(repo: RepoPreview) {
+  return { repo, market: await getMarketByGithubId(repo.githubRepoId) };
 }
 
 export async function githubPermission(token: string, owner: string, repo: string, username: string) {

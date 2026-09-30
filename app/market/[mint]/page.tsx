@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MarketPage({ params }: { params: Promise<{ mint: string }> }) {
   const { mint } = await params;
-  const market = getMarketByMint(mint);
+  const market = await getMarketByMint(mint);
   if (!market) notFound();
   return <TradePanel market={market} />;
 }
