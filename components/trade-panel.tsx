@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import type { Market } from "@/lib/types";
@@ -99,8 +101,27 @@ export function TradePanel({ market }: { market: Market }) {
 
   const graduated = curve?.complete || market.bondingComplete;
   const progress = Math.round((curve?.progress || (graduated ? 1 : 0)) * 100);
+  const claimLabel = market.claimStatus === "pending" ? "Continue claim" : market.claimStatus === "revoked" ? "Claim again" : "Claim as owner";
+  const claimCopy = market.claimStatus === "pending"
+    ? "GitHub verification is in progress. Continue to bind the wallet that should receive builder fees."
+    : market.claimStatus === "revoked"
+      ? "The previous claim was revoked. If you own or administer this repository, verify with GitHub and try again."
+      : "If you own or administer this repository, verify with GitHub and link the wallet that should receive builder fees.";
 
   return (
+    <div>
+      {market.claimStatus !== "active" && (
+        <section className="coin-claim" aria-label="Claim this coin">
+          <div>
+            <p className="eyebrow">REPO OWNER</p>
+            <h2>Claim ${market.symbol}</h2>
+            <p>{claimCopy}</p>
+          </div>
+          <Link href={`/claim/${market.githubRepoId}`} className="button-primary">
+            {claimLabel} <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
+        </section>
+      )}
     <div className="grid gap-5 lg:grid-cols-[220px_1fr_300px]">
       <aside>
         <div className="flex items-center gap-3">
@@ -108,12 +129,16 @@ export function TradePanel({ market }: { market: Market }) {
           <img src={market.avatarUrl} alt="" className="h-12 w-12 rounded-full" />
           <div>
             <h1 className="text-lg text-white">{market.fullName}</h1>
-            <p className="font-mono text-xs text-[#C9D5FF]">id {market.githubRepoId}</p>
+            <p className="font-mono text-xs text-[#C9D5FF]">${market.symbol} · id {market.githubRepoId}</p>
           </div>
         </div>
         <p className="mt-3 text-sm text-[#9DA8BE]">{formatStars(market.stars)} stars · {market.language || "—"}</p>
-        <p className="mt-2 text-sm text-white">{market.claimStatus === "active" ? "Claimed builder" : "Unclaimed"}</p>
-        {market.claimStatus !== "active" && <a className="mt-4 inline-flex rounded-full bg-[#9CB7FF] px-3 py-1.5 text-xs font-semibold text-[#0A1020]" href={`/claim/${market.githubRepoId}`}>Claim as builder</a>}
+        <p className="mt-2 text-sm text-white">{market.claimStatus === "active" ? "Claimed builder" : market.claimStatus === "pending" ? "Verification pending" : market.claimStatus === "revoked" ? "Claim revoked" : "Unclaimed"}</p>
+        {market.claimStatus !== "active" && (
+          <Link className="mt-4 inline-flex text-sm text-[#C9D5FF] underline" href={`/claim/${market.githubRepoId}`}>
+            {claimLabel}
+          </Link>
+        )}
         <a className="mt-3 block text-sm text-[#C9D5FF]" href={`/graduate/${market.mint}`}>Graduate</a>
       </aside>
       <section>
@@ -172,6 +197,7 @@ export function TradePanel({ market }: { market: Market }) {
         <a className="mt-3 block text-xs underline" href={pumpCoinUrl(market.mint)}>pump.fun</a>
         <a className="mt-1 block text-xs underline" href={dexscreenerUrl(market.mint)}>DexScreener</a>
       </aside>
+    </div>
     </div>
   );
 }

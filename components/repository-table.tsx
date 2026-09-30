@@ -1,15 +1,25 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowUpRight, Check, Eye, Star } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Market } from "@/lib/types";
 import { formatLaunched, formatStars, shortKey } from "@/lib/format";
 
 export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; emptyContent?: ReactNode }) {
+  const router = useRouter();
+
+  function openCoin(event: React.MouseEvent<HTMLTableRowElement>, mint: string) {
+    if ((event.target as HTMLElement).closest("a, button")) return;
+    router.push(`/market/${mint}`);
+  }
+
   return (
     <div className="repository-table-panel">
       <div className="repository-table-scroll" role="region" aria-label="Repository markets" tabIndex={0}>
         <table className="repository-table">
-          <caption className="sr-only">Repository markets with builder verification, token information, and GitHub stars. Financial metrics are not yet available.</caption>
+          <caption className="sr-only">Repository markets with builder verification, token information, and GitHub stars. Select a row to open the coin. Repo owners can claim from that page. Financial metrics are not yet available.</caption>
           <thead><tr>
             <th scope="col" className="repo-rank">#</th>
             <th scope="col">Repository</th>
@@ -24,7 +34,11 @@ export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; 
           </tr></thead>
           <tbody>
             {markets.map((market, index) => (
-              <tr key={market.mint}>
+              <tr
+                key={market.mint}
+                className={market.mint ? "is-openable" : undefined}
+                onClick={market.mint ? (event) => openCoin(event, market.mint) : undefined}
+              >
                 <td className="repo-rank">{String(index + 1).padStart(2, "0")}</td>
                 <td className="repo-identity-cell">
                   <div className="repo-identity">
@@ -35,7 +49,7 @@ export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; 
                       <p className="repo-description" title={market.description || "Public GitHub repository"}>{market.description || "Public GitHub repository"}</p>
                       <span className={`repo-verification ${market.claimStatus === "active" ? "is-verified" : ""}`}>
                         {market.claimStatus === "active" && <Check size={10} aria-hidden="true" />}
-                        {market.claimStatus === "active" ? "Verified builder" : market.claimStatus === "pending" ? "Verification pending" : "Unclaimed builder"}
+                        {market.claimStatus === "active" ? "Verified builder" : market.claimStatus === "pending" ? "Verification pending" : market.claimStatus === "revoked" ? "Claim revoked" : "Unclaimed builder"}
                       </span>
                     </div>
                   </div>
@@ -53,7 +67,10 @@ export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; 
                 <td><span className="repo-stars" title={`${market.stars.toLocaleString("en")} GitHub stars`}><Star size={13} aria-hidden="true" />{formatStars(market.stars)}</span></td>
                 <td><div className="repo-actions">
                   <a href={market.htmlUrl} target="_blank" rel="noopener noreferrer" className="repo-preview" aria-label={`View ${market.fullName} on GitHub`}><Eye size={15} aria-hidden="true" /></a>
-                  <Link href={`/market/${market.mint}`} className="repo-trade" aria-label={`Trade ${market.symbol}`}>Trade <ArrowUpRight size={13} aria-hidden="true" /></Link>
+                  {market.claimStatus !== "active" && (
+                    <Link href={`/claim/${market.githubRepoId}`} className="repo-claim" aria-label={`Claim ${market.fullName} as the repo owner`}>Claim</Link>
+                  )}
+                  <Link href={`/market/${market.mint}`} className="repo-trade" aria-label={`Open ${market.symbol}`}>Open <ArrowUpRight size={13} aria-hidden="true" /></Link>
                 </div></td>
               </tr>
             ))}
@@ -61,7 +78,7 @@ export function RepositoryTable({ markets, emptyContent }: { markets: Market[]; 
         </table>
       </div>
       {markets.length === 0 && emptyContent}
-      {markets.length > 0 && <p className="repo-data-note">— Market cap, volume, and earnings data are not available yet. Open a market to check its current on-chain state.</p>}
+      {markets.length > 0 && <p className="repo-data-note">— Select a row to open the coin. Repo owners can claim it from that page. Market cap, volume, and earnings data are not available yet.</p>}
     </div>
   );
 }
