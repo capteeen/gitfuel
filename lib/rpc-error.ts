@@ -27,6 +27,9 @@ export function explainChainError(error: unknown, fallback: string) {
   if (/access forbidden|\b403\b|the solana rpc rejected this request/i.test(message)) {
     return RPC_REJECTED;
   }
+  if (/encoding overruns Uint8Array|encoding overruns Buffer|Transaction too large/i.test(message)) {
+    return "This transaction is larger than Solana allows (1232 bytes). Shorten the metadata URI and try again.";
+  }
   const cleaned = redactSecrets(message).trim();
   return cleaned || fallback;
 }

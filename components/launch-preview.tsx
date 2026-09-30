@@ -20,7 +20,8 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
   const [rent, setRent] = useState<number | null>(null);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const [created, setCreated] = useState<{ mint: string; signature: string } | null>(null);
+  const [created, setCreated] = useState<{ mint: string; signature: string; buySignature?: string } | null>(null);
+  const [buyWarning, setBuyWarning] = useState("");
   const taken = symbols.includes(symbol) && market?.symbol !== symbol;
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
       return;
     }
     setError("");
+    setBuyWarning("");
     setBusy("Hosting metadata…");
     try {
       const meta = await fetch("/api/metadata/" + repo.githubRepoId, {
@@ -59,14 +61,14 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
       });
       const metaBody = await meta.json();
       if (!meta.ok) throw new Error(metaBody.error || "Metadata failed.");
-      setBusy("Waiting for the wallet to sign create_v2…");
+      setBusy(solBuy ? "Waiting for the wallet to sign create_v2. A first buy is a second signature." : "Waiting for the wallet to sign create_v2…");
       const { createCoin } = await import("@/lib/chain");
       const result = await createCoin(connection, { publicKey, signTransaction }, {
         name,
         symbol,
         uri: metaBody.uri,
         solBuy: solBuy ? Number(solBuy) : undefined,
-      });
+      }, (message) => setBusy(message));
       setBusy("Registering the GitHub id…");
       const registered = await fetch("/api/markets", {
         method: "POST",
@@ -87,6 +89,9 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
       const registeredBody = await registered.json();
       if (!registered.ok) throw new Error(registeredBody.error || "Registry rejected the mint.");
       setCreated(result);
+      if (result.buyError) {
+        setBuyWarning(`Coin created. The first buy did not land. ${result.buyError}`);
+      }
       setBusy("");
     } catch (cause) {
       setBusy("");
@@ -121,6 +126,7 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
         <input id="launch-image" value={image} onChange={(event) => setImage(event.target.value)} className="mt-1 w-full rounded-2xl border border-[#2B3150] bg-[#111320] px-4 py-3 text-sm" />
         <label htmlFor="launch-solBuy" className="mt-4 block text-xs text-[#9DA8BE]">Optional first buy (SOL)</label>
         <input id="launch-solBuy" value={solBuy} onChange={(event) => setSolBuy(event.target.value)} inputMode="decimal" placeholder="0" className="mt-1 w-full rounded-2xl border border-[#2B3150] bg-[#111320] px-4 py-3" />
+        <p className="mt-1 text-[11px] text-[#9DA8BE]">A first buy is a second wallet signature after the coin is created.</p>
       </div>
       <aside className="rounded-3xl border border-[#2B3150] bg-[#111320] p-5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -143,6 +149,7 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
           </button>
         )}
         {metaNote(created)}
+        {buyWarning && <p className="mt-3 text-sm text-[#FFB4BA]">{buyWarning}</p>}
         {error && <p className="mt-3 text-sm text-[#FFB4BA]">{error}</p>}
         {created && (
           <div className="mt-4 space-y-2 text-sm">

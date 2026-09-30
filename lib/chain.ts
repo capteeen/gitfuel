@@ -215,9 +215,6 @@ export async function createCoin(
   const symbol = input.symbol.trim();
   if (!name || name.length > 32) throw new Error("Name must be 1–32 characters.");
   if (!/^[A-Z0-9]{1,10}$/.test(symbol)) throw new Error("Symbol must be 1–10 letters or numbers.");
-  const online = new OnlinePumpSdk(connection);
-  const global = await online.fetchGlobal();
-  const feeConfig = await online.fetchFeeConfig().catch(() => null);
   const mintKeypair = Keypair.generate();
   const user = wallet.publicKey;
   const lamports = input.solBuy && input.solBuy > 0 ? Math.round(input.solBuy * LAMPORTS_PER_SOL) : 0;
@@ -225,32 +222,12 @@ export async function createCoin(
     throw new Error("First buy must be a SOL amount.");
   }
   assertMainnetPump(connection);
-  let instructions: TransactionInstruction[];
-  if (lamports > 0) {
-    const quoteAmount = new BN(lamports);
-    const amount = getBuyTokenAmountFromSolAmount({
-      global,
-      feeConfig,
-      mintSupply: null,
-      bondingCurve: null,
-      amount: quoteAmount,
-      quoteMint: NATIVE_MINT,
-    });
-    instructions = await PUMP_SDK.createV2AndBuyV2Instructions({
-      global,
-      mint: mintKeypair.publicKey,
-      name,
-      symbol,
-      uri: input.uri,
-      creator: user,
-      user,
-      amount,
-      quoteAmount,
-      mayhemMode: false,
-      cashback: false,
-    });
-  } else {
-    instructions = [
+  // create_v2 and buy_v2 together are ~1460 bytes. Solana packets stop at 1232,
+  // and the v0 simulation reports that as "encoding overruns Uint8Array".
+  const signature = await sendInstructions(
+    connection,
+    wallet,
+    [
       await PUMP_SDK.createV2Instruction({
         mint: mintKeypair.publicKey,
         name,
@@ -261,15 +238,47 @@ export async function createCoin(
         mayhemMode: false,
         cashback: false,
       }),
-    ];
+    ],
+    [mintKeypair],
+    {
+      units: 400_000,
+      microLamports: 200_000,
+      simulate: true,
+      onStatus,
+    },
+  );
+  const mint = mintKeypair.publicKey.toBase58();
+  if (lamports <= 0) return { signature, mint };
+  onStatus?.("Coin created. Waiting for the wallet to sign the first buy…");
+  try {
+    const buySignature = await buyFreshCurve(connection, wallet, mint, input.solBuy!, onStatus);
+    return { signature, mint, buySignature };
+  } catch (error) {
+    const buyError = error instanceof Error ? error.message : "The first buy failed after the coin was created.";
+    return { signature, mint, buyError };
   }
-  const signature = await sendInstructions(connection, wallet, instructions, [mintKeypair], {
-    units: 600_000,
-    microLamports: 200_000,
-    simulate: true,
-    onStatus,
-  });
-  return { signature, mint: mintKeypair.publicKey.toBase58() };
+}
+
+async function buyFreshCurve(
+  connection: Connection,
+  wallet: WalletSigner,
+  mint: string,
+  sol: number,
+  onStatus?: (message: string) => void,
+) {
+  let last: unknown;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await buyOnCurve(connection, wallet, mint, sol, 1);
+    } catch (error) {
+      last = error;
+      const message = error instanceof Error ? error.message : "";
+      if (!/Bonding curve account not found/i.test(message) || attempt === 4) break;
+      onStatus?.("Waiting for the new curve to show up…");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+  throw last instanceof Error ? last : new Error("The first buy failed after the coin was created.");
 }
 
 export async function buyOnCurve(connection: Connection, wallet: WalletSigner, mintAddress: string, sol: number, slippage: number) {
