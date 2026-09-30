@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
@@ -15,7 +16,8 @@ const STEPS = [
 
 function currentStep(pathname: string) {
   if (pathname.startsWith("/launch")) return "launch";
-  if (pathname.startsWith("/market") || pathname.startsWith("/r/")) return "trade";
+  if (pathname.startsWith("/market") || pathname.startsWith("/r/"))
+    return "trade";
   if (pathname.startsWith("/claim")) return "earn";
   if (pathname.startsWith("/graduate")) return "graduate";
   if (pathname.startsWith("/gful")) return "buyback";
@@ -24,32 +26,28 @@ function currentStep(pathname: string) {
 }
 
 export function LoopStepper() {
-  const pathname = usePathname();
-  const current = currentStep(pathname);
-
+  const current = currentStep(usePathname());
   return (
-    <div className="mx-4 mb-2 flex items-center gap-1 overflow-x-auto rounded-full border border-white/10 bg-black/35 px-2 py-1.5 md:mx-8">
-      {STEPS.map((step, index) => {
-        const active = current === step.id;
-        const earn = step.id === "earn";
-        return (
-          <div key={step.id} className="flex items-center">
-            <Link
-              href={step.href}
-              className={cn(
-                "rounded-full px-2.5 py-1 text-[12px] whitespace-nowrap",
-                earn && "step-earn bg-[#39FF14]/10",
-                active && "bg-white text-[#14120f]",
-                !active && "text-white/75",
-              )}
-            >
-              <span className="mr-1 font-mono text-[10px] tabular-nums">{step.n}</span>
-              {step.label}
-            </Link>
-            {index < STEPS.length - 1 && <span className="px-1 text-white/25">→</span>}
-          </div>
-        );
-      })}
-    </div>
+    <nav aria-label="Market lifecycle" className="loop-stepper">
+      {STEPS.map((step, index) => (
+        <div key={step.id} className="flex items-center gap-3">
+          <Link
+            href={step.href}
+            aria-current={current === step.id ? "step" : undefined}
+            className={cn(
+              "loop-step",
+              current === step.id && "is-active",
+              step.id === "earn" && "builder-step",
+            )}
+          >
+            <span>{step.n}</span>
+            {step.label}
+          </Link>
+          {index < STEPS.length - 1 && (
+            <ArrowRight className="step-arrow" size={12} aria-hidden="true" />
+          )}
+        </div>
+      ))}
+    </nav>
   );
 }

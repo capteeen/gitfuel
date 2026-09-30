@@ -1,67 +1,159 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ArrowDown, ArrowRight, ArrowUpRight, GitBranch, Search, Sparkles } from "lucide-react";
 import type { Market } from "@/lib/types";
-import { Mark } from "./logo";
-import { Orbital } from "./orbital";
+
+type StoryCard = {
+  step: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  image: string;
+  href: string;
+  action: string;
+  tone: "cyan" | "lilac" | "blue";
+};
+
+const cards: StoryCard[] = [
+  {
+    step: "01",
+    eyebrow: "FIND YOUR NEXT PROJECT",
+    title: "Discover repos",
+    description:
+      "Explore markets tied to public GitHub repositories. The code is where every story starts.",
+    image: "/illustrations/discover-repos.png",
+    href: "#markets",
+    action: "Explore markets",
+    tone: "cyan",
+  },
+  {
+    step: "02",
+    eyebrow: "BRING IT TO LIFE",
+    title: "Launch a market",
+    description:
+      "Paste a repo, shape its token, and launch on the pump.fun bonding curve.",
+    image: "/illustrations/launch-market.png",
+    href: "/launch",
+    action: "Launch a repo",
+    tone: "lilac",
+  },
+  {
+    step: "03",
+    eyebrow: "FOR THE PEOPLE BUILDING IT",
+    title: "Builders earn",
+    description:
+      "Verified GitHub admins can claim a proposed share of creator fees.",
+    image: "/illustrations/builder-fees.png",
+    href: "/claim",
+    action: "How claims work",
+    tone: "blue",
+  },
+];
 
 export function Hero({ markets }: { markets: Market[] }) {
-  const avatars = markets.slice(0, 3);
-
   return (
-    <section className="hero-dusk relative min-h-[820px] px-5 pt-2 pb-10 md:px-10">
-      <div className="grid items-center gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-        <div>
-          <p className="rise mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/25 px-3 py-1 text-[10px] font-medium tracking-[0.18em] text-white/80">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#39FF14]" />
-            OPEN-SOURCE MARKETS · PUMP.FUN
-          </p>
-          <h1 className="display rise rise-2">
-            <span className="block">Open</span>
-            <span className="flex items-center gap-[0.18em]">
-              <span className="spark-pill">
-                <Mark className="h-[0.42em] w-[0.42em]" />
-              </span>
-              source
-            </span>
-            <span className="block">markets</span>
-          </h1>
-          <p className="rise rise-3 mt-5 max-w-md text-lg text-white/80">Builders earn. Paste a repo. Launch on pump.fun. Fuel the maintainers.</p>
-          <div className="rise rise-4 mt-6 flex items-center gap-3">
-            <span className="font-mono text-sm text-white">
-              {markets.length}
-              <span className="ml-2 text-white/60">markets</span>
-            </span>
-            <span className="flex -space-x-2">
-              {avatars.length === 0 &&
-                [0, 1, 2].map((item) => <span key={item} className="h-7 w-7 rounded-full border border-white/20 bg-white/10" />)}
-              {avatars.map((market) => (
-                // Real GitHub avatars only. Empty rings when no market exists.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={market.mint} src={market.avatarUrl} alt="" className="h-7 w-7 rounded-full border border-black/40" />
-              ))}
-            </span>
-            <Link href="/launch" className="rounded-full bg-[#39FF14] px-4 py-2 text-sm font-semibold text-[#071208] shadow-[0_0_24px_rgba(57,255,20,0.35)]">
-              Paste a GitHub URL
-            </Link>
+    <>
+    <section className="hero-feature" aria-labelledby="hero-title">
+      <div className="hero-feature-lines" aria-hidden="true" />
+      <div className="hero-feature-copy">
+        <p className="hero-feature-kicker"><Sparkles size={12} aria-hidden="true" /> OPEN SOURCE, ON SOLANA</p>
+        <h1 id="hero-title">Give code the <span>momentum</span> it deserves.</h1>
+        <p className="hero-feature-description">
+          Discover markets for the repositories you believe in. Launch one for a project you love. Give builders a stake in what comes next.
+        </p>
+        <div className="hero-feature-actions">
+          <Link href="#markets" className="hero-feature-primary">Explore markets <ArrowRight size={17} aria-hidden="true" /></Link>
+          <Link href="/launch" className="hero-feature-secondary">Launch a repo <ArrowUpRight size={17} aria-hidden="true" /></Link>
+        </div>
+      </div>
+      <div className="hero-browser" aria-label="Preview of finding and launching a repository market">
+        <div className="hero-browser-bar">
+          <div className="hero-browser-dots" aria-hidden="true"><i /><i /><i /></div>
+          <span>gitfuel.app / discover</span>
+          <span className="hero-browser-status"><span /> BUILT ON SOLANA</span>
+        </div>
+        <div className="hero-browser-body">
+          <div className="hero-browser-intro">
+            <div>
+              <p>THE NEXT WAVE STARTS HERE</p>
+              <h2>Find the code worth fueling.</h2>
+            </div>
+            <div className="hero-browser-orbit" aria-hidden="true"><Image src="/illustrations/launch-market.png" alt="" fill sizes="220px" className="object-contain" /></div>
+          </div>
+          <div className="hero-browser-search"><Search size={18} aria-hidden="true" /><span>Search repositories, symbols, or builders</span><kbd>⌘ K</kbd></div>
+          <div className="hero-browser-row">
+            <div className="hero-browser-repo"><GitBranch size={18} aria-hidden="true" /><span>your-org / your-next-idea</span></div>
+            <span className="hero-browser-pill">YOUR NEXT MARKET</span>
+            <span className="hero-browser-row-action">Launch a repo <ArrowUpRight size={15} aria-hidden="true" /></span>
           </div>
         </div>
-        <Orbital />
-      </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
-        <article className="glass-dark p-5 text-white">
-          <p className="max-w-sm text-2xl leading-tight tracking-tight">Paste a repo. Fuel the maintainers.</p>
-          <div className="mt-6 flex items-center justify-between">
-            <p className="max-w-[14rem] text-sm text-white/60">Graduates to PumpSwap. GitFuel does not launch on Meteora.</p>
-            <span className="rounded-full bg-[#39FF14] px-3 py-1 text-xs font-semibold text-[#071208]">70% admin</span>
-          </div>
-        </article>
-        <article className="glass-dark flex items-end justify-between p-5 text-white">
-          <div>
-            <p className="font-display text-6xl leading-none tracking-tight">70%</p>
-            <p className="mt-2 text-sm text-white/70">Proposed to verified admins</p>
-          </div>
-          <span className="rounded-full border border-white/15 px-3 py-1 text-[10px] tracking-[0.16em] text-[#B2FFC8]">PROPOSED</span>
-        </article>
       </div>
     </section>
+    <section className="hero-showcase" aria-labelledby="journey-title">
+      <div className="showcase-intro">
+        <div>
+          <p className="showcase-kicker">
+            <span /> GITFUEL / OPEN-SOURCE MARKETS
+          </p>
+          <h2 id="journey-title">
+            Code deserves <em>momentum.</em>
+          </h2>
+        </div>
+        <div className="showcase-aside">
+          <p>
+            A new way to back the repositories you believe in and the builders
+            behind them.
+          </p>
+          <Link href="#markets">
+            Explore {markets.length}{" "}
+            {markets.length === 1 ? "market" : "markets"}{" "}
+            <ArrowDown size={15} aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+
+      <div className="journey-grid">
+        {cards.map((card, index) => (
+          <article
+            key={card.step}
+            className={`journey-card journey-${card.tone}`}
+          >
+            <div className="journey-topline">
+              <span>{card.step} / 03</span>
+              <span>GITFUEL</span>
+            </div>
+            <div className="journey-art">
+              <Image
+                src={card.image}
+                alt=""
+                fill
+                sizes="(max-width: 760px) 88vw, (max-width: 1320px) 30vw, 370px"
+                priority={index === 0}
+                className="object-contain"
+              />
+            </div>
+            <div className="journey-content">
+              <p className="journey-eyebrow">{card.eyebrow}</p>
+              <h2>{card.title}</h2>
+              <p className="journey-description">{card.description}</p>
+              {card.step === "03" && (
+                <p className="journey-policy">
+                  70% VERIFIED ADMIN SHARE <span>PROPOSED</span>
+                </p>
+              )}
+              <Link href={card.href} className="journey-action">
+                {card.action} <ArrowUpRight size={17} aria-hidden="true" />
+              </Link>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="showcase-foot">
+        <span>ONE REPO. ONE MARKET.</span>
+        <span>DISCOVER → LAUNCH → BUILDERS EARN</span>
+        <span>ON SOLANA</span>
+      </div>
+    </section>
+    </>
   );
 }

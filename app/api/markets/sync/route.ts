@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const curve = PUMP_SDK.decodeBondingCurve(info);
     const pool = canonicalPumpPoolPda(mint);
     const poolInfo = await connection.getAccountInfo(pool);
-    let pumpswapPool: string | null = poolInfo ? pool.toBase58() : null;
+    const pumpswapPool: string | null = poolInfo ? pool.toBase58() : null;
     if (curve.complete && !pumpswapPool) {
       await online.fetchGlobal();
     }

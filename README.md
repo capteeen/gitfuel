@@ -15,11 +15,9 @@ Open http://localhost:3000.
 
 Requires Node 22 (built-in `node:sqlite` for the local registry at `data/gitfuel.sqlite`).
 
-## Cluster
+## Solana RPC
 
-`NEXT_PUBLIC_SOLANA_CLUSTER` is `devnet` by default. The header **DEV / MAIN** pill switches the browser RPC between public devnet and public mainnet-beta.
-
-pump.fun’s bonding program `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P` is the mainnet program id from pump-public-docs. A devnet create only succeeds if that program is actually deployed on the RPC you are using. If it is not, the wallet error is shown as-is. Set `NEXT_PUBLIC_SOLANA_CLUSTER=mainnet-beta` and a funded mainnet wallet to target mainnet. `SOLANA_RPC_URL` is what API routes use when they confirm a create signature; `NEXT_PUBLIC_SOLANA_RPC_URL` is the browser connection when it matches the default cluster.
+GitFuel connects to Solana mainnet-beta. The public mainnet RPC is used by default. Set `NEXT_PUBLIC_SOLANA_RPC_URL` for a browser RPC and `SOLANA_RPC_URL` for API routes that confirm create signatures. Both custom endpoints must point to mainnet-beta. Launches require a funded mainnet wallet.
 
 Copy `.env.example` to `.env.local`.
 

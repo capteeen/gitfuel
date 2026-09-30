@@ -1,45 +1,67 @@
+import { ArrowUpRight, Code2, GitBranch } from "lucide-react";
 import Link from "next/link";
 import { Mark } from "./logo";
 
 export function Orbital() {
   return (
-    <div className="relative mx-auto h-[500px] w-full max-w-[620px]">
-      <svg viewBox="0 0 640 520" className="h-full w-full" role="img" aria-label="Fuel cell in orbit">
-        <ellipse className="orbit-spin" cx="320" cy="250" rx="210" ry="86" fill="none" stroke="rgba(255,255,255,0.45)" strokeDasharray="2 7" />
-        <g>
-          <rect x="118" y="214" width="150" height="96" rx="8" fill="#102033" stroke="#39FF14" strokeOpacity="0.45" />
-          {Array.from({ length: 5 }).map((_, row) =>
-            Array.from({ length: 7 }).map((__, col) => (
-              <rect key={`${row}-${col}`} x={130 + col * 18} y={226 + row * 16} width="12" height="10" rx="1" fill="#16385a" stroke="#7ec8ff" strokeOpacity="0.35" />
-            )),
-          )}
-          <rect x="392" y="198" width="150" height="108" rx="8" transform="rotate(18 467 252)" fill="#102033" stroke="#39FF14" strokeOpacity="0.45" />
-          <path d="M250 286c40 8 78 8 130-18l18 34c-62 36-112 34-166 16z" fill="#1a1e22" />
-          <rect x="268" y="214" width="168" height="78" rx="39" fill="url(#body)" />
-          <rect x="392" y="222" width="28" height="62" fill="#d7dde4" />
-          <path d="M430 230c46 8 62 22 62 31s-18 22-62 28z" fill="#0e1214" />
-          <circle cx="476" cy="253" r="6" fill="#39FF14" />
-          <defs>
-            <linearGradient id="body" x1="268" y1="214" x2="436" y2="292">
-              <stop offset="0" stopColor="#9aa3ab" />
-              <stop offset="0.45" stopColor="#f4f7f8" />
-              <stop offset="1" stopColor="#2a3036" />
-            </linearGradient>
-          </defs>
-        </g>
-        <g>
-          <circle cx="214" cy="188" r="4" fill="#39FF14" />
-          <text x="164" y="176" fill="#E8F5E9" fontSize="11" fontFamily="ui-monospace, monospace">
-            GitHub ID
-          </text>
-        </g>
-      </svg>
-      <Link href="/launch" className="glass-light absolute top-16 right-0 flex w-[148px] items-start justify-between p-4 md:right-2">
-        <span className="text-[22px] leading-none font-medium tracking-tight">Paste a URL</span>
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-[#14120f] text-white">
-          <Mark className="h-3.5 w-3.5" />
-        </span>
+    <div
+      className="fuel-visual"
+      aria-label="Open-source code powering a GitFuel market"
+    >
+      <div className="orbital-grid" aria-hidden="true" />
+      <div className="orbit orbit-one" aria-hidden="true">
+        <span />
+      </div>
+      <div className="orbit orbit-two" aria-hidden="true">
+        <span />
+      </div>
+      <div className="orbit orbit-three" aria-hidden="true" />
+      <div className="fuel-core" aria-hidden="true">
+        <div className="fuel-core-inner">
+          <Mark className="h-20 w-20" />
+        </div>
+      </div>
+      <div className="orbit-label orbit-label-top">
+        <span className="status-dot" /> THE OPEN-SOURCE ENGINE
+      </div>
+      <div className="repo-chip">
+        <div className="flex items-center gap-2 text-white/80">
+          <Code2 size={15} aria-hidden="true" />
+          <span>your next big idea</span>
+          <GitBranch
+            size={13}
+            className="ml-auto text-ff-muted"
+            aria-hidden="true"
+          />
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#e2ad78]" />
+          <span className="font-mono text-[10px] text-white/45">
+            git commit -m &quot;keep building&quot;
+          </span>
+        </div>
+      </div>
+      <Link href="/claim" className="builder-chip">
+        <div className="flex items-center justify-between gap-6">
+          <span className="text-[10px] font-medium tracking-widest">
+            BACK TO BUILDERS
+          </span>
+          <ArrowUpRight size={17} aria-hidden="true" />
+        </div>
+        <p className="mt-3 font-display text-6xl leading-none">
+          70<span className="text-3xl">%</span>
+        </p>
+        <p className="mt-2 text-[10px] text-black/55">
+          Proposed creator fee share
+        </p>
       </Link>
+      <div className="orbit-label orbit-label-bottom">
+        <span>CODE</span>
+        <span className="h-px w-10 bg-white/20" />
+        <span>COMMUNITY</span>
+        <span className="h-px w-10 bg-white/20" />
+        <span>FUEL</span>
+      </div>
     </div>
   );
 }

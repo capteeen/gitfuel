@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import { SiteFrame } from "@/components/site-frame";
 import { Providers } from "@/components/providers";
 import "./globals.css";
@@ -14,21 +14,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const display = Instrument_Serif({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-instrument",
-});
-
 export const metadata: Metadata = {
   title: "GitFuel — Open source markets",
-  description: "Paste a public GitHub repo. Launch on pump.fun. Fuel verified maintainers.",
+  description:
+    "Paste a public GitHub repo. Launch on pump.fun. Fuel verified maintainers.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${display.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <Providers>
           <SiteFrame>{children}</SiteFrame>
         </Providers>
