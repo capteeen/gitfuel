@@ -11,7 +11,7 @@ const NAV = [
   { href: "/", label: "Discover" },
   { href: "/launch", label: "Launch" },
   { href: "/claim", label: "For builders" },
-  { href: "/gful", label: "$GITFUEL" },
+  { href: "/repogo", label: "$REPOGO" },
 ];
 
 export function SiteFrame({ children }: { children: React.ReactNode }) {
@@ -71,7 +71,7 @@ export function SiteFrame({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
             <p className="mt-7 max-w-4xl text-[11px] leading-relaxed text-ff-muted">
-              GitFuel is experimental software. Tokens can lose all value. Not
+              Repogo is experimental software. Tokens can lose all value. Not
               affiliated with GitHub or pump.fun. No investment advice. Creator
               fee claims require GitHub admin verification and are not
               guarantees of payment. Revenue and buyback figures are proposed

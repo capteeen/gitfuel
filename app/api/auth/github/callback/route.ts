@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${tokenBody.access_token}`,
-      "User-Agent": "GitFuel",
+      "User-Agent": "Repogo",
     },
   });
   if (!userResponse.ok) return fail("GitHub user lookup failed.");

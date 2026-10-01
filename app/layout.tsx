@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GitFuel — Open source markets",
+  title: "Repogo — Open source markets",
   description:
-    "Paste a public GitHub repo. Launch on pump.fun. Fuel verified maintainers.",
+    "Paste a public GitHub repo. Launch on pump.fun. Back verified maintainers.",
 };
 
 export default function RootLayout({

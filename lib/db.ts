@@ -128,7 +128,10 @@ async function database() {
     const { DatabaseSync } = await import("node:sqlite");
     const dir = path.join(process.cwd(), "data");
     fs.mkdirSync(dir, { recursive: true });
-    const local = new DatabaseSync(path.join(dir, "gitfuel.sqlite"));
+    const file = path.join(dir, "repogo.sqlite");
+    const previous = path.join(dir, "gitfuel.sqlite");
+    if (!fs.existsSync(file) && fs.existsSync(previous)) fs.renameSync(previous, file);
+    const local = new DatabaseSync(file);
     local.exec(schema);
     return local;
   })();
@@ -591,10 +594,10 @@ export async function updateCurve(mint: string, bondingComplete: boolean, pumpsw
   return await getMarketByMint(mint);
 }
 
-const METADATA_DRAFT_LAUNCHER = "GitFuelMetadataDraftLauncher0001";
+const METADATA_DRAFT_LAUNCHER = "RepogoMetadataDraftLauncher0001";
 
 function metadataDraftMint(githubRepoId: number) {
-  return `gitfuelmd${String(githubRepoId).padStart(24, "0")}`;
+  return `repogomd${String(githubRepoId).padStart(24, "0")}`;
 }
 
 function metadataDocument(record: Record<string, unknown>) {
@@ -609,7 +612,7 @@ function metadataDocument(record: Record<string, unknown>) {
     description: nullable(record.description) ?? "",
     image,
     showName: true,
-    createdOn: "https://gitfuel.xyz",
+    createdOn: "https://repogo.xyz",
     website,
     external_url: website,
     attributes: [{ trait_type: "github_repo_id", value: String(num(record.github_repo_id)) }],

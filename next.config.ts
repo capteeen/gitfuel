@@ -2,6 +2,12 @@ import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/gful", destination: "/repogo", permanent: false },
+      { source: "/api/gful/:path*", destination: "/api/repogo/:path*", permanent: false },
+    ];
+  },
   serverExternalPackages: ["@pump-fun/pump-sdk", "@pump-fun/pump-swap-sdk"],
   transpilePackages: [
     "@solana/wallet-adapter-base",

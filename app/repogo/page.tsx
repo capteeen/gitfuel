@@ -1,21 +1,21 @@
 import { dexscreenerUrl } from "@/lib/cluster";
-import { GFUL_POLICY, policyPayload } from "@/lib/policy";
+import { REPOGO_POLICY, policyPayload } from "@/lib/policy";
 
 export const dynamic = "force-dynamic";
 
-export default function GfulPage() {
+export default function RepogoPage() {
   const policy = policyPayload;
   return (
     <div className="mx-auto max-w-4xl">
       <p className="font-mono text-xs text-[#9CB7FF]">06 Buy back</p>
-      <h1 className="mt-2 font-display text-6xl text-white">$GITFUEL</h1>
+      <h1 className="mt-2 font-display text-6xl text-white">$REPOGO</h1>
       <p className="mt-3 max-w-2xl text-[#9DA8BE]">Pre-TGE: policy only. This dashboard does not list buys, burns, or reserve balances unless a reviewed execution is linked. The list below is empty on purpose.</p>
       <section className="mt-6 rounded-3xl border border-[#9CB7FF]/40 bg-[#111320] p-5">
         <p className="text-[11px] tracking-[0.18em] text-[#9CB7FF]">PROPOSED</p>
         <h2 className="mt-2 text-2xl text-white">60 / 20 / 20</h2>
         <p className="mt-2 text-sm text-[#9DA8BE]">Of eligible platform revenue — the 15% ops slice of creator fees, plus any app fees, net of costs.</p>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {GFUL_POLICY.map((item) => (
+          {REPOGO_POLICY.map((item) => (
             <article key={item.destination} className="rounded-2xl border border-[#2B3150] p-4">
               <p className="font-mono text-2xl text-[#C9D5FF]">{item.share}</p>
               <p className="mt-1 text-white">{item.destination}</p>

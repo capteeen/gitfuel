@@ -445,7 +445,7 @@ export async function assignBuilderShare(
   const config = await readSharing(connection, input.mint);
   if (!config) throw new Error("No fee-sharing config on this mint yet.");
   if (config.admin !== wallet.publicKey.toBase58()) {
-    throw new Error("Only the sharing-config admin can update shares. GitFuel does not move funds for them.");
+    throw new Error("Only the sharing-config admin can update shares. Repogo does not move funds for them.");
   }
   const buckets = new Map<string, number>();
   const add = (address: string, bps: number) => buckets.set(address, (buckets.get(address) || 0) + bps);

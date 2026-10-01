@@ -72,7 +72,7 @@ export function Hero({ markets }: { markets: Market[] }) {
       <div className="hero-browser" aria-label="Preview of finding and launching a repository market">
         <div className="hero-browser-bar">
           <div className="hero-browser-dots" aria-hidden="true"><i /><i /><i /></div>
-          <span>gitfuel.app / discover</span>
+          <span>repogo.app / discover</span>
           <span className="hero-browser-status"><span /> BUILT ON SOLANA</span>
         </div>
         <div className="hero-browser-body">
@@ -96,7 +96,7 @@ export function Hero({ markets }: { markets: Market[] }) {
       <div className="showcase-intro">
         <div>
           <p className="showcase-kicker">
-            <span /> GITFUEL / OPEN-SOURCE MARKETS
+            <span /> REPOGO / OPEN-SOURCE MARKETS
           </p>
           <h2 id="journey-title">
             Code deserves <em>momentum.</em>
@@ -123,7 +123,7 @@ export function Hero({ markets }: { markets: Market[] }) {
           >
             <div className="journey-topline">
               <span>{card.step} / 03</span>
-              <span>GITFUEL</span>
+              <span>REPOGO</span>
             </div>
             <div className="journey-art">
               <Image

@@ -1,4 +1,4 @@
--- GitFuel launch registry. Public read. Writes go through server routes
+-- Repogo launch registry. Public read. Writes go through server routes
 -- with the publishable key (anon role), so RLS checks the row shape.
 -- Identity columns cannot change after insert. Only status = 'test' rows can be deleted.
 

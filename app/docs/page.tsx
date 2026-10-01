@@ -1,4 +1,4 @@
-import { CREATOR_FEE_SPLIT, GFUL_POLICY } from "@/lib/policy";
+import { CREATOR_FEE_SPLIT, REPOGO_POLICY } from "@/lib/policy";
 
 const LOOP = [
   ["01", "Discover", "Browse markets tied to public repos, or paste a URL to resolve one."],
@@ -6,7 +6,7 @@ const LOOP = [
   ["03", "Trade", "Buy and sell on the curve before graduation. Afterward, the pair is PumpSwap."],
   ["04", "Builders earn", "A verified owner or admin claims creator fees. This is the highlighted step."],
   ["05", "Graduate", "A complete curve can be migrated, permissionlessly, to PumpSwap."],
-  ["06", "Buy back", "Platform revenue policy for $GITFUEL. Proposed until a real transaction is linked."],
+  ["06", "Buy back", "Platform revenue policy for $REPOGO. Proposed until a real transaction is linked."],
 ];
 
 export default function DocsPage() {
@@ -15,7 +15,7 @@ export default function DocsPage() {
       <header>
         <p className="font-mono text-xs text-[#9CB7FF]">Docs</p>
         <h1 className="mt-2 font-display text-5xl text-white">The loop</h1>
-        <p className="mt-3 text-[#9DA8BE]">GitFuel is an open-source markets layer on Solana. Paste a public GitHub URL, launch on pump.fun, and route creator fees to a verified owner or admin.</p>
+        <p className="mt-3 text-[#9DA8BE]">Repogo is an open-source markets layer on Solana. Paste a public GitHub URL, launch on pump.fun, and route creator fees to a verified owner or admin.</p>
       </header>
       <ol className="space-y-3">
         {LOOP.map(([n, title, copy]) => (
@@ -38,7 +38,7 @@ export default function DocsPage() {
         </ul>
         <p className="mt-4 text-sm text-[#9DA8BE]">The platform slice, if and when it is collected:</p>
         <ul className="mt-3 space-y-2 text-sm">
-          {GFUL_POLICY.map((item) => (
+          {REPOGO_POLICY.map((item) => (
             <li key={item.destination} className="flex justify-between gap-4 border-b border-[#2B3150] py-2">
               <span>{item.destination}</span>
               <span className="font-mono text-[#C9D5FF]">{item.share}</span>
@@ -49,7 +49,7 @@ export default function DocsPage() {
       </section>
       <section id="community">
         <h2 className="text-2xl text-white">Links</h2>
-        <p className="mt-2 text-sm text-[#9DA8BE]">GitHub, Discord, and X for GitFuel are placeholders until those accounts exist. Program notes: pump-public-docs. Ticker checks: DexScreener.</p>
+        <p className="mt-2 text-sm text-[#9DA8BE]">GitHub, Discord, and X for Repogo are placeholders until those accounts exist. Program notes: pump-public-docs. Ticker checks: DexScreener.</p>
       </section>
     </article>
   );

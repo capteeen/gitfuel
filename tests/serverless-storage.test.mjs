@@ -31,7 +31,7 @@ test("Vercel without a registry serves public pages and blocks launch writes", a
     for (let attempt = 0; attempt < 100; attempt++) {
       if (child.exitCode !== null) break;
       try {
-        const response = await fetch(`${base}/api/gful/policy`);
+        const response = await fetch(`${base}/api/repogo/policy`);
         if (response.ok) {
           ready = true;
           break;

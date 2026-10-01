@@ -227,7 +227,7 @@ export function LaunchForm() {
         </div>
       </div>
       <Link href="/docs" className="button-text mt-8 text-xs">
-        New to GitFuel? See how it works{" "}
+        New to Repogo? See how it works{" "}
         <ArrowRight size={13} aria-hidden="true" />
       </Link>
     </div>

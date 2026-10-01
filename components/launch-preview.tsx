@@ -119,7 +119,7 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
         <input id="launch-name" value={name} maxLength={32} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded-2xl border border-[#2B3150] bg-[#111320] px-4 py-3" />
         <label htmlFor="launch-symbol" className="mt-4 block text-xs text-[#9DA8BE]">Symbol</label>
         <input id="launch-symbol" value={symbol} maxLength={10} onChange={(event) => setSymbol(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))} className="mt-1 w-full rounded-2xl border border-[#2B3150] bg-[#111320] px-4 py-3 font-mono" />
-        {taken && <p className="mt-1 text-xs text-[#FFB4BA]">Another GitFuel market already uses this symbol. Symbols are not unique on pump.fun, but the warning stands.</p>}
+        {taken && <p className="mt-1 text-xs text-[#FFB4BA]">Another Repogo market already uses this symbol. Symbols are not unique on pump.fun, but the warning stands.</p>}
         <label htmlFor="launch-description" className="mt-4 block text-xs text-[#9DA8BE]">Description</label>
         <textarea id="launch-description" value={description} onChange={(event) => setDescription(event.target.value)} className="mt-1 h-24 w-full rounded-2xl border border-[#2B3150] bg-[#111320] px-4 py-3" />
         <label htmlFor="launch-image" className="mt-4 block text-xs text-[#9DA8BE]">Image URL</label>
@@ -136,7 +136,7 @@ export function LaunchPreview({ repo, market, symbols }: { repo: RepoPreview; ma
           <div className="flex justify-between"><dt className="text-[#9DA8BE]">GitHub ID</dt><dd className="font-mono text-[#C9D5FF]">{repo.githubRepoId}</dd></div>
           <div className="flex justify-between"><dt className="text-[#9DA8BE]">Mint rent</dt><dd>{rent == null ? "RPC unread" : `${rent.toFixed(4)} SOL`}</dd></div>
         </dl>
-        <p className="mt-4 text-xs leading-relaxed text-[#9DA8BE]">Mint rent is the only figure read from chain. Protocol fees are whatever pump.fun charges when the transaction lands. You sign create_v2. GitFuel does not use a hot wallet.</p>
+        <p className="mt-4 text-xs leading-relaxed text-[#9DA8BE]">Mint rent is the only figure read from chain. Protocol fees are whatever pump.fun charges when the transaction lands. You sign create_v2. Repogo does not use a hot wallet.</p>
         <details className="mt-4 text-xs text-[#9DA8BE]">
           <summary className="cursor-pointer text-white">Creator fee recipients · proposed</summary>
           <p className="mt-2">70% verified admin, 15% launcher, 15% platform. Until a claim, the launcher can sign a fee-sharing config that parks 85% on the platform treasury and 15% on the launcher. That custodial interim is labeled on the trade page. Treasury: {platformTreasury || "set NEXT_PUBLIC_PLATFORM_TREASURY"}.</p>

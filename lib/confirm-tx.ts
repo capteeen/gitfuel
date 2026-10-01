@@ -46,10 +46,10 @@ export async function assertConfirmedCreate(signature: string, mint: string, lau
   const connection = new Connection(serverRpc(), "confirmed");
   const tx = await loadConfirmed(connection, signature);
   if (!tx) {
-    throw new Error("Create transaction is not confirmed on this RPC yet. Retry in a moment. GitFuel will not register an unconfirmed mint.");
+    throw new Error("Create transaction is not confirmed on this RPC yet. Retry in a moment. Repogo will not register an unconfirmed mint.");
   }
   if (tx.meta?.err) {
-    throw new Error("That transaction failed on-chain. GitFuel will not register it.");
+    throw new Error("That transaction failed on-chain. Repogo will not register it.");
   }
   const logs = tx.meta?.logMessages || [];
   if (!logs.some((line) => line.includes("Instruction: CreateV2"))) {

@@ -3,15 +3,15 @@ export default function LegalPage() {
     <article className="mx-auto max-w-3xl space-y-8 text-sm leading-relaxed text-[#C9DDD0]">
       <header>
         <h1 className="font-display text-5xl text-white">Legal</h1>
-        <p className="mt-3">Not legal advice. Have counsel review before mainnet, public token solicitation, or marketing in your jurisdictions. This page is the product-kit checklist for GitFuel.</p>
+        <p className="mt-3">Not legal advice. Have counsel review before mainnet, public token solicitation, or marketing in your jurisdictions. This page is the product-kit checklist for Repogo.</p>
       </header>
       <section>
         <h2 className="text-xl text-white">1. Nature of the product</h2>
-        <p className="mt-2">GitFuel is software that helps users launch and trade Solana tokens associated with public GitHub repositories via pump.fun / PumpSwap. Tokens may be extremely volatile, illiquid, or worthless. Nothing in the app is financial, investment, or legal advice.</p>
+        <p className="mt-2">Repogo is software that helps users launch and trade Solana tokens associated with public GitHub repositories via pump.fun / PumpSwap. Tokens may be extremely volatile, illiquid, or worthless. Nothing in the app is financial, investment, or legal advice.</p>
       </section>
       <section>
         <h2 className="text-xl text-white">2. No affiliation</h2>
-        <p className="mt-2">GitFuel is not affiliated with, endorsed by, or sponsored by:</p>
+        <p className="mt-2">Repogo is not affiliated with, endorsed by, or sponsored by:</p>
         <ul className="mt-2 list-disc pl-5">
           <li>GitHub, Inc. / Microsoft</li>
           <li>pump.fun / PumpSwap operators</li>
@@ -22,11 +22,11 @@ export default function LegalPage() {
       </section>
       <section>
         <h2 className="text-xl text-white">3. Trademarks and brand</h2>
-        <p className="mt-2">GitFuel is an original brand and is not repo.ing / REPOING. It does not copy those logos, mascots, diagram artwork, or trademarked phrases. Factual comparison belongs in docs, not in the wordmark.</p>
+        <p className="mt-2">Repogo is an original brand and is not repo.ing / REPOING. It does not copy those logos, mascots, diagram artwork, or trademarked phrases. Factual comparison belongs in docs, not in the wordmark.</p>
       </section>
       <section>
         <h2 className="text-xl text-white">4. Tokens and securities risk</h2>
-        <p className="mt-2">Launching or promoting tokens can implicate securities, commodities, and money-transmission rules depending on jurisdiction and how $GITFUEL or repo coins are marketed. Avoid promises of profit, guaranteed buybacks, or passive income. Proposed revenue and buyback policies stay labeled proposed until executed under a reviewed policy. This interface does not fabricate transactions.</p>
+        <p className="mt-2">Launching or promoting tokens can implicate securities, commodities, and money-transmission rules depending on jurisdiction and how $REPOGO or repo coins are marketed. Avoid promises of profit, guaranteed buybacks, or passive income. Proposed revenue and buyback policies stay labeled proposed until executed under a reviewed policy. This interface does not fabricate transactions.</p>
       </section>
       <section id="claims">
         <h2 className="text-xl text-white">5. Creator fees and claims</h2>
@@ -46,11 +46,11 @@ export default function LegalPage() {
       </section>
       <section>
         <h2 className="text-xl text-white">9. Open source and third-party licenses</h2>
-        <p className="mt-2">Respect the licenses of @pump-fun/pump-sdk, wallet-adapter, and the other dependencies. If GitFuel itself is open-sourced, pick an SPDX license and a CONTRIBUTING guide first.</p>
+        <p className="mt-2">Respect the licenses of @pump-fun/pump-sdk, wallet-adapter, and the other dependencies. If Repogo itself is open-sourced, pick an SPDX license and a CONTRIBUTING guide first.</p>
       </section>
       <section>
         <h2 className="text-xl text-white">10. Disclaimer</h2>
-        <p className="mt-2">GitFuel is experimental software. Tokens can lose all value. Not affiliated with GitHub or pump.fun. No investment advice. Creator fee claims require GitHub admin verification and are not guarantees of payment. Revenue and buyback figures are proposed policies unless linked to verified on-chain transactions.</p>
+        <p className="mt-2">Repogo is experimental software. Tokens can lose all value. Not affiliated with GitHub or pump.fun. No investment advice. Creator fee claims require GitHub admin verification and are not guarantees of payment. Revenue and buyback figures are proposed policies unless linked to verified on-chain transactions.</p>
       </section>
       <section>
         <h2 className="text-xl text-white">11. Before public launch</h2>
@@ -61,7 +61,7 @@ export default function LegalPage() {
           <li>Multisig for treasury; avoid a single-EOA policy fund</li>
           <li>Fee-sharing docs that match the on-chain config</li>
           <li>No placeholder “executed buyback” UI — this build does not have one</li>
-          <li>Trademark search for GitFuel / GITFUEL in the markets you enter</li>
+          <li>Trademark search for Repogo / REPOGO in the markets you enter</li>
         </ul>
       </section>
     </article>

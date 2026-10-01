@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     description: parsed.data.description,
     image: parsed.data.image,
     showName: true,
-    createdOn: "https://gitfuel.xyz",
+    createdOn: "https://repogo.xyz",
     website: repo.htmlUrl,
     external_url: repo.htmlUrl,
     attributes: [{ trait_type: "github_repo_id", value: String(repo.githubRepoId) }],
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         pinataContent: document,
-        pinataMetadata: { name: `gitfuel-${repo.githubRepoId}` },
+        pinataMetadata: { name: `repogo-${repo.githubRepoId}` },
       }),
     });
     if (!pin.ok) return NextResponse.json({ error: "Pinata rejected the metadata JSON." }, { status: 502 });

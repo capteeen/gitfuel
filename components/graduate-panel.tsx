@@ -56,7 +56,7 @@ export function GraduatePanel({ market }: { market: Market }) {
     <div className="mx-auto max-w-3xl">
       <p className="font-mono text-xs text-[#9CB7FF]">05 Graduate</p>
       <h1 className="mt-2 font-display text-5xl text-white">Migrate to PumpSwap</h1>
-      <p className="mt-4 text-[#9DA8BE]">When the bonding curve is complete, anyone can crank pump.fun’s migrate instruction. The canonical PumpSwap pool opens and LP is burned the way pump documents it. GitFuel does not use Meteora.</p>
+      <p className="mt-4 text-[#9DA8BE]">When the bonding curve is complete, anyone can crank pump.fun’s migrate instruction. The canonical PumpSwap pool opens and LP is burned the way pump documents it. Repogo does not use Meteora.</p>
       <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
         <div className="h-full bg-[#9CB7FF]" style={{ width: `${Math.round((progress ?? (complete ? 1 : 0)) * 100)}%` }} />
       </div>

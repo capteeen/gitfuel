@@ -6,7 +6,7 @@ export function Orbital() {
   return (
     <div
       className="fuel-visual"
-      aria-label="Open-source code powering a GitFuel market"
+      aria-label="Open-source code powering a Repogo market"
     >
       <div className="orbital-grid" aria-hidden="true" />
       <div className="orbit orbit-one" aria-hidden="true">

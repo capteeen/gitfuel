@@ -24,7 +24,7 @@ export function parseGithubUrl(input: string) {
   const owner = parts[0];
   const repo = parts[1].replace(/\.git$/, "");
   if (!OWNER.test(owner) || !OWNER.test(repo)) {
-    return { error: "Owner or repo contains characters GitFuel will not send to GitHub." as const };
+    return { error: "Owner or repo contains characters Repogo will not send to GitHub." as const };
   }
   return { owner, repo };
 }
@@ -45,7 +45,7 @@ type GithubRepoBody = {
 function githubHeaders() {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
-    "User-Agent": "GitFuel",
+    "User-Agent": "Repogo",
     "X-GitHub-Api-Version": "2022-11-28",
   };
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
@@ -54,7 +54,7 @@ function githubHeaders() {
 
 function previewFromGithub(body: GithubRepoBody): RepoPreview {
   if (body.private) {
-    throw new Error("Private repositories are out of scope. GitFuel only launches public repos.");
+    throw new Error("Private repositories are out of scope. Repogo only launches public repos.");
   }
   if (!body.id || !body.owner?.login || !body.name || !body.full_name || !body.html_url || !body.owner.avatar_url) {
     throw new Error("GitHub omitted the numeric repo id or owner. Prefill stopped.");
@@ -76,7 +76,7 @@ function previewFromGithub(body: GithubRepoBody): RepoPreview {
 export async function resolvePublicRepo(owner: string, repo: string): Promise<RepoPreview> {
   const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers: githubHeaders(), cache: "no-store" });
   if (response.status === 404) {
-    throw new Error("GitHub returned 404. This URL is private, missing, or mistyped. GitFuel only accepts public repositories.");
+    throw new Error("GitHub returned 404. This URL is private, missing, or mistyped. Repogo only accepts public repositories.");
   }
   if (response.status === 403 || response.status === 429) {
     throw new Error("GitHub rate limit. Wait, or set GITHUB_TOKEN for a higher limit. Nothing was launched.");
@@ -113,7 +113,7 @@ export async function githubPermission(token: string, owner: string, repo: strin
       headers: {
         Accept: "application/vnd.github+json",
         Authorization: `Bearer ${token}`,
-        "User-Agent": "GitFuel",
+        "User-Agent": "Repogo",
         "X-GitHub-Api-Version": "2022-11-28",
       },
       cache: "no-store",

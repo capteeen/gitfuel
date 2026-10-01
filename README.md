@@ -1,8 +1,8 @@
-# GitFuel
+# Repogo
 
 Open-source markets on Solana. Paste a public GitHub repository, launch a coin on **pump.fun** (bonding curve → PumpSwap, not Meteora), and route creator fees toward a verified GitHub owner or admin.
 
-`$GITFUEL` revenue policy in the app is **proposed**. The buyback page does not invent transactions.
+`$REPOGO` revenue policy in the app is **proposed**. The buyback page does not invent transactions.
 
 ## Run
 
@@ -13,7 +13,7 @@ npm run dev
 
 Open http://localhost:3000.
 
-Requires Node 22 (built-in `node:sqlite` for the local registry at `data/gitfuel.sqlite`).
+Requires Node 22 (built-in `node:sqlite` for the local registry at `data/repogo.sqlite`).
 
 ## Deploy on Vercel
 
@@ -23,7 +23,7 @@ Public launch listings use Supabase. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PU
 
 ## Solana RPC
 
-GitFuel connects to Solana mainnet-beta. Launches require a funded mainnet wallet. pump.fun's global account is mainnet-only, so a devnet RPC cannot launch or quote a coin.
+Repogo connects to Solana mainnet-beta. Launches require a funded mainnet wallet. pump.fun's global account is mainnet-only, so a devnet RPC cannot launch or quote a coin.
 
 The public endpoint `https://api.mainnet-beta.solana.com` is the default when `SOLANA_RPC_URL` and `NEXT_PUBLIC_SOLANA_RPC_URL` are empty. It answers `getAccountInfo` from the server and returns HTTP 403 when a browser sends an `Origin` header. Wallet and pump.fun reads therefore go through `/api/rpc`, which forwards to `SOLANA_RPC_URL`, then `NEXT_PUBLIC_SOLANA_RPC_URL`, then that public endpoint, without the browser origin. Set `NEXT_PUBLIC_SOLANA_RPC_URL` only for a provider that allows browser calls. Both custom endpoints must be mainnet-beta. A paid key is optional; the public endpoint still serves the proxy.
 
@@ -37,4 +37,4 @@ Proposed creator-fee split: 70% verified admin, 15% launcher, 15% platform. Unti
 
 ## Not in this build
 
-Live `$GITFUEL` buybacks, private repos, Meteora launches, dispute resolution beyond a link to `/legal`.
+Live `$REPOGO` buybacks, private repos, Meteora launches, dispute resolution beyond a link to `/legal`.

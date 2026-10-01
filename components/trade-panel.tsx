@@ -166,7 +166,7 @@ export function TradePanel({ market }: { market: Market }) {
         </div>
         <div className="mt-3 text-sm text-[#9DA8BE]">
           {tab === "about" && <p>{market.description || "No GitHub description."} <a className="text-white" href={market.htmlUrl}>Repo</a></p>}
-          {tab === "holders" && <p>Holder index is not in Phase 1. Use Solscan. GitFuel will not draw a fake holder table.</p>}
+          {tab === "holders" && <p>Holder index is not in Phase 1. Use Solscan. Repogo will not draw a fake holder table.</p>}
           {tab === "txns" && <p>Transaction history is the wallet and Solscan. A local signature appears after you trade.</p>}
           {tab === "builder" && (
             <p>Status {market.claimStatus}. Payout {market.claimedWallet ? shortKey(market.claimedWallet) : "unbound"}. Claims prove GitHub adminship at verification time.</p>

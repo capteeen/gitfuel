@@ -1,7 +1,7 @@
 import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 
-export type GitfuelSession = {
+export type RepogoSession = {
   githubUserId?: number;
   githubLogin?: string;
   accessToken?: string;
@@ -9,8 +9,8 @@ export type GitfuelSession = {
 };
 
 export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_PASSWORD || "development-only-gitfuel-session-secret-change",
-  cookieName: "gitfuel_session",
+  password: process.env.SESSION_PASSWORD || "development-only-repogo-session-secret-change",
+  cookieName: "repogo_session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
@@ -20,5 +20,5 @@ export const sessionOptions: SessionOptions = {
 };
 
 export async function getSession() {
-  return getIronSession<GitfuelSession>(await cookies(), sessionOptions);
+  return getIronSession<RepogoSession>(await cookies(), sessionOptions);
 }

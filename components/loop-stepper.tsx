@@ -11,7 +11,7 @@ const STEPS = [
   { id: "trade", n: "03", label: "Trade", href: "/#markets" },
   { id: "earn", n: "04", label: "Builders earn", href: "/claim" },
   { id: "graduate", n: "05", label: "Graduate", href: "/docs#graduate" },
-  { id: "buyback", n: "06", label: "Buy back", href: "/gful" },
+  { id: "buyback", n: "06", label: "Buy back", href: "/repogo" },
 ];
 
 function currentStep(pathname: string) {
@@ -20,7 +20,7 @@ function currentStep(pathname: string) {
     return "trade";
   if (pathname.startsWith("/claim")) return "earn";
   if (pathname.startsWith("/graduate")) return "graduate";
-  if (pathname.startsWith("/gful")) return "buyback";
+  if (pathname.startsWith("/repogo")) return "buyback";
   if (pathname === "/" || pathname.startsWith("/discover")) return "discover";
   return null;
 }
